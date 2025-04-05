@@ -1,4 +1,4 @@
-package com.example.purrytify.model
+package com.example.purrytify.models
 
 data class Song(
     val id: String,

@@ -1,7 +1,7 @@
 package com.example.purrytify.ui.components
 
 import androidx.compose.runtime.Composable
-import com.example.purrytify.model.Song
+import com.example.purrytify.models.Song
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row

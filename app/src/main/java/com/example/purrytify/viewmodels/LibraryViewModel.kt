@@ -1,8 +1,8 @@
-package com.example.purrytify.ui.viewmodels
+package com.example.purrytify.viewmodels
 
 import androidx.lifecycle.ViewModel
 import com.example.purrytify.R
-import com.example.purrytify.model.Song
+import com.example.purrytify.models.Song
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 

@@ -30,12 +30,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.example.purrytify.ui.components.LibraryTabs
-import com.example.purrytify.ui.components.MiniPlayer
 import com.example.purrytify.ui.components.SongItem
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.purrytify.ui.viewmodels.LibraryViewModel
-import com.example.purrytify.ui.viewmodels.MainViewModel
-import com.example.purrytify.ui.viewmodels.ViewModelFactoryProvider
+import com.example.purrytify.viewmodels.LibraryViewModel
+import com.example.purrytify.viewmodels.MainViewModel
+import com.example.purrytify.viewmodels.ViewModelFactoryProvider
 
 
 @Composable

@@ -15,9 +15,6 @@ import androidx.compose.ui.Modifier
 import com.example.purrytify.ui.screens.HomeScreen
 import com.example.purrytify.ui.screens.LoginScreen
 import com.example.purrytify.ui.theme.PurrytifyTheme
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.purrytify.ui.viewmodels.MainViewModel
-import com.example.purrytify.ui.viewmodels.ViewModelFactoryProvider
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

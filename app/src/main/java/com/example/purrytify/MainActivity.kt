@@ -12,6 +12,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.purrytify.ui.components.BottomNavbar
 import com.example.purrytify.ui.navigation.AppNavigation
 import com.example.purrytify.ui.theme.PurrytifyTheme
+import com.example.purrytify.ui.screens.LoginScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -23,18 +24,25 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+//
+//@Composable
+//fun PurrytifyApp() {
+//    val navController = rememberNavController()
+//    Scaffold(
+//        bottomBar = { BottomNavbar(navController) }
+//    ) { innerPadding ->
+//        AppNavigation(
+//            navController = navController,
+//            modifier = Modifier.padding(innerPadding)
+//        )
+//    }
+//}
+//
 
+// coba coba
 @Composable
 fun PurrytifyApp() {
-    val navController = rememberNavController()
-    Scaffold(
-        bottomBar = { BottomNavbar(navController) }
-    ) { innerPadding ->
-        AppNavigation(
-            navController = navController,
-            modifier = Modifier.padding(innerPadding)
-        )
-    }
+    LoginScreen()
 }
 
 @Preview(showBackground = true)

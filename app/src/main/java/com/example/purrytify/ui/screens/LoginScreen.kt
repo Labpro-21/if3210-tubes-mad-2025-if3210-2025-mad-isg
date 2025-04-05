@@ -1,5 +1,6 @@
 package com.example.purrytify.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -15,24 +16,26 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -42,19 +45,55 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.purrytify.R
 import com.example.purrytify.ui.theme.BACKGROUND_COLOR
 import com.example.purrytify.ui.theme.GREEN_COLOR
+import com.example.purrytify.viewmodels.LoginResult
+import com.example.purrytify.viewmodels.LoginViewModel
+import com.example.purrytify.viewmodels.ViewModelFactory
 
 @Composable
-fun LoginScreen() {
+fun LoginScreen(
+    onLoginSuccess: () -> Unit,
+    loginViewModel: LoginViewModel = viewModel(
+        factory = ViewModelFactory(LocalContext.current)
+    )
+) {
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val halfHeight = screenHeight / 2
+    val context = LocalContext.current
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+
+    val loginResult by loginViewModel.loginResult.observeAsState()
+
+    // Check if user is already logged in
+    LaunchedEffect(key1 = Unit) {
+        if (loginViewModel.isLoggedIn()) {
+            onLoginSuccess()
+        }
+    }
+
+    // Handle login result
+    LaunchedEffect(key1 = loginResult) {
+        when (loginResult) {
+            is LoginResult.Success -> {
+                Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
+                onLoginSuccess()
+            }
+            is LoginResult.Error -> {
+                Toast.makeText(
+                    context,
+                    "Login failed: ${(loginResult as LoginResult.Error).message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            else -> {}
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -190,22 +229,33 @@ fun LoginScreen() {
 
             // Login button
             Button(
-                onClick = { /* TODO: Handle login */ },
+                onClick = {
+                    loginViewModel.login(email, password)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
                 shape = RoundedCornerShape(24.dp),
+                enabled = loginResult !is LoginResult.Loading && email.isNotEmpty() && password.isNotEmpty(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = GREEN_COLOR
+                    containerColor = GREEN_COLOR,
+                    disabledContainerColor = Color.Gray
                 )
             ) {
-                Text(
-                    text = "Log in",
-                    color = Color.White,
-                    fontFamily = FontFamily(Font(R.font.poppins_semi_bold)),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
+                if (loginResult is LoginResult.Loading) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                } else {
+                    Text(
+                        text = "Log in",
+                        color = Color.White,
+                        fontFamily = FontFamily(Font(R.font.poppins_semi_bold)),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
             }
         }
     }

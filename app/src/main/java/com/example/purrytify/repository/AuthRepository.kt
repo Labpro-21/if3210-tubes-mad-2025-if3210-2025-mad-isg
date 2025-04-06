@@ -11,9 +11,9 @@ class AuthRepository(private val tokenManager: TokenManager) {
             val response = RetrofitClient.apiService.login(LoginRequest(email, password))
 
             if (response.isSuccessful && response.body() != null) {
-                val token = response.body()!!.token
-                tokenManager.saveToken(token)
-                Result.success(token)
+                val accessToken = response.body()!!.accessToken
+                tokenManager.saveToken(accessToken)
+                Result.success(accessToken)
             } else {
                 Result.failure(Exception("Login failed: ${response.errorBody()?.string() ?: "Unknown error"}"))
             }

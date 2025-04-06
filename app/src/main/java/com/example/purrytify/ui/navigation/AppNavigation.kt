@@ -18,8 +18,8 @@ object Destinations {
 
 @Composable
 fun AppNavigation(
+    modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
-    modifier: Modifier = Modifier
 ) {
     NavHost(
         navController = navController,

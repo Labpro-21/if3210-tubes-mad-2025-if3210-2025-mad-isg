@@ -11,6 +11,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.Text
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
@@ -19,6 +20,14 @@ import com.example.purrytify.ui.navigation.AppNavigation
 import com.example.purrytify.ui.screens.LoginScreen
 import com.example.purrytify.ui.theme.PurrytifyTheme
 import com.example.purrytify.util.TokenManager
+import androidx.compose.foundation.layout.Column
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.purrytify.ui.components.MiniPlayer
+import com.example.purrytify.viewmodels.MainViewModel
+import com.example.purrytify.viewmodels.ViewModelFactoryProvider
+
 
 class MainActivity : ComponentActivity() {
     private lateinit var tokenManager: TokenManager
@@ -39,9 +48,28 @@ class MainActivity : ComponentActivity() {
                 ) {
                     if (isLoggedIn.value) {
                         val navController = rememberNavController()
+                        val viewModel: MainViewModel = viewModel(factory = ViewModelFactoryProvider.Factory)
+                        val currentSong = viewModel.currentSong.collectAsState().value
+                        val isPlaying = viewModel.isPlaying.collectAsState().value
 
                         Scaffold(
-                            bottomBar = { BottomNavbar(navController = navController) }
+                            bottomBar = {
+                                Column {
+
+                                    if (currentSong != null) {
+                                        MiniPlayer(
+                                            currentSong = currentSong,
+                                            isPlaying = isPlaying,
+                                            onPlayPauseClick = { viewModel.togglePlayPause() },
+                                            onPlayerClick = { /* Navigate to full player */ }
+                                        )
+                                    } else {
+                                        Text("Debug: currentSong is null", color = Color.Red)
+                                    }
+
+                                BottomNavbar(navController = navController)
+                                }
+                            }
                         ) { paddingValues ->
                             Box(
                                 modifier = Modifier.padding(paddingValues)

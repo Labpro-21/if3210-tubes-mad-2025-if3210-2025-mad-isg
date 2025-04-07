@@ -62,6 +62,7 @@ fun LoginScreen(
 ) {
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val halfHeight = screenHeight / 2
+    val quarterHeight = screenHeight / 4
     val context = LocalContext.current
 
     var email by remember { mutableStateOf("") }
@@ -118,7 +119,7 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Top
         ) {
             // Logo & headline
-            Spacer(modifier = Modifier.height(halfHeight - 50.dp))
+            Spacer(modifier = Modifier.height(halfHeight - 120.dp))
             Box(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center

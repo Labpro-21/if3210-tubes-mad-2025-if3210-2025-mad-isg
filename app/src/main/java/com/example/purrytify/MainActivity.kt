@@ -158,6 +158,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Check is service running and start if not
+        if (tokenManager.isLoggedIn()) {
+            startTokenRefreshService()
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         networkConnectionObserver.stop()

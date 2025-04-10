@@ -97,4 +97,12 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+
+    // Background services dan notifications
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.core:core-ktx:1.12.0")
+
+    // LiveData, StateFlow, dan SharedFlow
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-process:2.7.0")
 }

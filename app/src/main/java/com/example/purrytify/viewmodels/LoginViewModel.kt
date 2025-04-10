@@ -1,13 +1,15 @@
 package com.example.purrytify.viewmodels
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.purrytify.repository.AuthRepository
+import com.example.purrytify.util.NetworkUtils
 import kotlinx.coroutines.launch
 
-class LoginViewModel(private val authRepository: AuthRepository) : ViewModel() {
+class LoginViewModel(private val authRepository: AuthRepository, private val application: android.app.Application) : ViewModel() {
 
     private val _loginResult = MutableLiveData<LoginResult>()
     val loginResult: LiveData<LoginResult> = _loginResult
@@ -17,6 +19,10 @@ class LoginViewModel(private val authRepository: AuthRepository) : ViewModel() {
 
         viewModelScope.launch {
             try {
+                if (!NetworkUtils.isNetworkAvailable(application)) {
+                    _loginResult.value = LoginResult.Error("No internet connection. Check your network and try again.")
+                    return@launch
+                }
                 val result = authRepository.login(email, password)
 
                 result.fold(

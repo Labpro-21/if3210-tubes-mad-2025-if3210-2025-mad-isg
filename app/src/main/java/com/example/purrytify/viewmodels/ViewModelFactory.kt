@@ -17,7 +17,7 @@ class ViewModelFactory(private val context: Context) : ViewModelProvider.Factory
             modelClass.isAssignableFrom(LoginViewModel::class.java) -> {
                 val tokenManager = TokenManager(context)
                 val authRepository = AuthRepository(tokenManager)
-                LoginViewModel(authRepository) as T
+                LoginViewModel(authRepository, context.applicationContext as android.app.Application) as T
             }
             modelClass.isAssignableFrom(ProfileViewModel::class.java) -> {
                 val tokenManager = TokenManager(context)

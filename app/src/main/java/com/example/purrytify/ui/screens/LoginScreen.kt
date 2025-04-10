@@ -62,7 +62,6 @@ fun LoginScreen(
 ) {
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val halfHeight = screenHeight / 2
-    val quarterHeight = screenHeight / 4
     val context = LocalContext.current
 
     var email by remember { mutableStateOf("") }

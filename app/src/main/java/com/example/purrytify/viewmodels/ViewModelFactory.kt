@@ -5,7 +5,6 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.purrytify.PurrytifyApp
-import com.example.purrytify.data.repository.SongRepository
 import com.example.purrytify.repository.AuthRepository
 import com.example.purrytify.repository.UserRepository
 import com.example.purrytify.util.TokenManager
@@ -33,6 +32,10 @@ class ViewModelFactory(private val context: Context) : ViewModelProvider.Factory
             modelClass.isAssignableFrom(LibraryViewModel::class.java) -> {
                 val app = context.applicationContext as PurrytifyApp
                 LibraryViewModel(app.songRepository) as T
+            }
+            modelClass.isAssignableFrom(HomeViewModel::class.java) -> {
+                val app = context.applicationContext as PurrytifyApp
+                HomeViewModel(app.songRepository) as T
             }
             modelClass.isAssignableFrom(MainViewModel::class.java) -> {
                 // MainViewModel doesn't need any special dependencies

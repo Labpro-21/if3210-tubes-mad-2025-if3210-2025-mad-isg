@@ -28,20 +28,3 @@ class MainViewModel : ViewModel() {
         _isPlaying.value = true
     }
 }
-
-object ViewModelFactoryProvider {
-    private var instance: MainViewModel? = null
-
-    val Factory = object : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
-                if (instance == null) {
-                    instance = MainViewModel()
-                }
-                return instance as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
-        }
-    }
-}

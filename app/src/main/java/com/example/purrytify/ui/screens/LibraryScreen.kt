@@ -1,5 +1,6 @@
 package com.example.purrytify.ui.screens
 
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,25 +30,35 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.purrytify.models.Song
 import com.example.purrytify.ui.components.LibraryTabs
 import com.example.purrytify.ui.components.SongItem
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.purrytify.ui.components.UploadSongDialog
 import com.example.purrytify.viewmodels.LibraryViewModel
 import com.example.purrytify.viewmodels.MainViewModel
-import com.example.purrytify.viewmodels.ViewModelFactoryProvider
-
+import com.example.purrytify.viewmodels.ViewModelFactory
 
 @Composable
 fun LibraryScreen(
-    viewModel: LibraryViewModel = viewModel(),
-    mainViewModel: MainViewModel = viewModel(factory = ViewModelFactoryProvider.Factory)
+    libraryViewModel: LibraryViewModel = viewModel(
+        factory = ViewModelFactory.getInstance(LocalContext.current)
+    ),
+    mainViewModel: MainViewModel = viewModel(
+        viewModelStoreOwner = LocalContext.current as ComponentActivity,
+        factory = ViewModelFactory.getInstance(LocalContext.current)
+    ),
+    onSongSelected: (Song) -> Unit ={}
 ) {
     // State untuk tab yang dipilih
     var selectedTab by remember { mutableStateOf("All") }
+    var showUploadDialog by remember { mutableStateOf(false) }
+
     // Ambil data dari ViewModel
-    val songs = viewModel.songs.collectAsState().value
-    val currentSong = viewModel.currentSong.collectAsState().value
-    val isPlaying = viewModel.isPlaying.collectAsState().value
+    val songs by libraryViewModel.songs.collectAsState()
+    val currentSong by mainViewModel.currentSong.collectAsState()
+    val isPlaying by libraryViewModel.isPlaying.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -70,7 +81,7 @@ fun LibraryScreen(
                     fontWeight = FontWeight.Bold
                 )
 
-                IconButton(onClick = { /* Handle add button click */ }) {
+                IconButton(onClick = { showUploadDialog = true }) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Add Song",
@@ -95,19 +106,31 @@ fun LibraryScreen(
 
                 items(displayedSongs) { song ->
                     SongItem(
-                        song = song,
-                        onSongClick = {clickedSong ->
-                            viewModel.playSong(clickedSong)
+                        song = song.copy(isPlaying = currentSong?.id == song.id && isPlaying),
+                        onSongClick = { clickedSong ->
+                            libraryViewModel.playSong(clickedSong)
+                            onSongSelected(clickedSong)
                             mainViewModel.setCurrentSong(clickedSong)
                         }
                     )
                 }
             }
 
-            // Space for Mini Player
+            // Space for Mini Player if needed
             if (currentSong != null) {
                 Spacer(modifier = Modifier.height(60.dp))
             }
+        }
+
+        // Upload Song Dialog
+        if (showUploadDialog) {
+            UploadSongDialog(
+                onDismiss = { showUploadDialog = false },
+                onSaveClick = { title, artist, filePath, artworkPath, duration ->
+                    libraryViewModel.addSong(title, artist, filePath, artworkPath, duration)
+                    showUploadDialog = false
+                }
+            )
         }
     }
 }

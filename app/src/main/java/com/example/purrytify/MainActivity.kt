@@ -23,10 +23,11 @@ import com.example.purrytify.util.TokenManager
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.purrytify.ui.components.MiniPlayer
 import com.example.purrytify.viewmodels.MainViewModel
-import com.example.purrytify.viewmodels.ViewModelFactoryProvider
+import com.example.purrytify.viewmodels.ViewModelFactory
 
 
 class MainActivity : ComponentActivity() {
@@ -48,7 +49,10 @@ class MainActivity : ComponentActivity() {
                 ) {
                     if (isLoggedIn.value) {
                         val navController = rememberNavController()
-                        val viewModel: MainViewModel = viewModel(factory = ViewModelFactoryProvider.Factory)
+                        val viewModel: MainViewModel = viewModel(
+                            factory = ViewModelFactory.getInstance(LocalContext.current)
+                        )
+
                         val currentSong = viewModel.currentSong.collectAsState().value
                         val isPlaying = viewModel.isPlaying.collectAsState().value
 

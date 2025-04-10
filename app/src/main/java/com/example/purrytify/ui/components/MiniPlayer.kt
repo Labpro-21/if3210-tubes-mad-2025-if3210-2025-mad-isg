@@ -28,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.filled.Pause
+import com.example.purrytify.R
 
 
 @Composable
@@ -47,9 +48,10 @@ fun MiniPlayer(
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Album Art
+            // Album Art - using simple Image with placeholder
+            // Note: For better image loading, use the SongCoverImage component
             Image(
-                painter = painterResource(id = currentSong.albumArt),
+                painter = painterResource(id = R.drawable.ic_image_placeholder),
                 contentDescription = "${currentSong.title} album art",
                 modifier = Modifier
                     .size(40.dp)

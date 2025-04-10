@@ -15,6 +15,8 @@ coreSplashscreen = "1.0.1"
 datastoreCoreAndroid = "1.1.4"
 datastorePreferencesCoreAndroid = "1.2.0-alpha01"
 recyclerview = "1.4.0"
+volley = "1.2.1"
+espressoCoreVersion = "3.5.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -38,6 +40,8 @@ androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscree
 androidx-datastore-core-android = { group = "androidx.datastore", name = "datastore-core-android", version.ref = "datastoreCoreAndroid" }
 androidx-datastore-preferences-core-android = { group = "androidx.datastore", name = "datastore-preferences-core-android", version.ref = "datastorePreferencesCoreAndroid" }
 androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
+volley = { group = "com.android.volley", name = "volley", version.ref = "volley" }
+espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCoreVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

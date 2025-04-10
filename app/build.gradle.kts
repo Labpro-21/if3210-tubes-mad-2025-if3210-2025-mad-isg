@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("kotlin-kapt")
 }
 
 android {
@@ -58,6 +59,8 @@ dependencies {
     implementation(libs.androidx.datastore.core.android)
     implementation(libs.androidx.datastore.preferences.core.android)
     implementation("androidx.recyclerview:recyclerview:1.3.0")
+    implementation(libs.volley)
+    implementation(libs.espresso.core)
     val composeBom = platform("androidx.compose:compose-bom:2024.02.02")
     implementation(composeBom)
     androidTestImplementation(composeBom)
@@ -97,4 +100,15 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+
+    // Room dependencies
+    val roomVersion = "2.5.2"  // Downgrade dari 2.6.1
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    kapt("androidx.room:room-compiler:$roomVersion")
+
+
+    implementation("io.coil-kt:coil-compose:2.4.0")
+    implementation("io.coil-kt:coil-svg:2.4.0")
+    implementation("io.coil-kt:coil-video:2.4.0")
 }

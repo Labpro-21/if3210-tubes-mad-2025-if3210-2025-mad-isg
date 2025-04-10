@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.Image
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.ui.Alignment
@@ -20,10 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.Icon
-
+import com.example.purrytify.R
 
 @Composable
 fun SongItem(
@@ -37,14 +34,11 @@ fun SongItem(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Album Art
-        Image(
-            painter = painterResource(id = song.albumArt),
+        // Album Art using our custom component
+        SongCoverImage(
+            imageUrl = song.coverUrl,
             contentDescription = "${song.title} album art",
-            modifier = Modifier
-                .size(50.dp)
-                .clip(RoundedCornerShape(4.dp)),
-            contentScale = ContentScale.Crop
+            modifier = Modifier.size(50.dp)
         )
 
         // Song Info

@@ -1,6 +1,7 @@
 package com.example.purrytify.ui.screens
 
 import android.provider.ContactsContract.Profile
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,7 +40,6 @@ fun ProfileScreen(
 )
 {
     val context = LocalContext.current
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -58,8 +58,7 @@ fun ProfileScreen(
 
         Button(
             onClick = {
-                profileViewModel.logout()
-                (context as? MainActivity)?.recreate()
+                (context as? MainActivity)?.logout()
             },
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Red,

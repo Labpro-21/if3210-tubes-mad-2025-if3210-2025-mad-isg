@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.example.purrytify.PurrytifyApp
 import com.example.purrytify.data.repository.SongRepository
 import com.example.purrytify.repository.AuthRepository
+import com.example.purrytify.repository.UserRepository
 import com.example.purrytify.util.TokenManager
 
 class ViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
@@ -22,7 +23,8 @@ class ViewModelFactory(private val context: Context) : ViewModelProvider.Factory
             modelClass.isAssignableFrom(ProfileViewModel::class.java) -> {
                 val tokenManager = TokenManager(context)
                 val authRepository = AuthRepository(tokenManager)
-                ProfileViewModel(authRepository) as T
+                val userRepository = UserRepository(tokenManager)  // Tambahkan baris ini
+                ProfileViewModel(authRepository, userRepository) as T  // Update bagian ini untuk menyertakan userRepository
             }
             modelClass.isAssignableFrom(SongViewModel::class.java) -> {
                 val app = context.applicationContext as PurrytifyApp

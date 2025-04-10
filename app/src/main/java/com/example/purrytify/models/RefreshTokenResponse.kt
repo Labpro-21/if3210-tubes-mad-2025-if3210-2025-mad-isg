@@ -1,6 +1,6 @@
 package com.example.purrytify.models
 
-data class LoginResponse(
+data class RefreshTokenResponse(
     val accessToken: String,
-    val refreshToken: String,
+    val refreshToken: String
 )

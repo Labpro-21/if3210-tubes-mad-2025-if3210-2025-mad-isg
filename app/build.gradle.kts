@@ -100,4 +100,12 @@ dependencies {
 
     implementation ("androidx.constraintlayout:constraintlayout:2.2.1")
     implementation ("io.coil-kt:coil-compose:2.4.0")
+
+    // Background services dan notifications
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.core:core-ktx:1.12.0")
+
+    // LiveData, StateFlow, dan SharedFlow
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-process:2.7.0")
 }

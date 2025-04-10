@@ -1,6 +1,7 @@
 package com.example.purrytify.ui.screens
 
-
+import android.provider.ContactsContract.Profile
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -198,8 +199,7 @@ fun ProfileContent(userProfile: UserProfile, viewModel: ProfileViewModel) {
         // Logout Button
         Button(
             onClick = {
-                viewModel.logout()
-                (context as? MainActivity)?.recreate()
+                (context as? MainActivity)?.logout()
             },
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Red,

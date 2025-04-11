@@ -3,7 +3,6 @@
     xmlns:tools="http://schemas.android.com/tools" >
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
@@ -33,15 +32,6 @@
             android:name=".service.TokenRefreshService"
             android:enabled="true"
             android:exported="false" />
-
-        <receiver
-            android:name=".receiver.NetworkConnectionReceiver"
-            android:enabled="true"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
-            </intent-filter>
-        </receiver>
 
     </application>
 </manifest>

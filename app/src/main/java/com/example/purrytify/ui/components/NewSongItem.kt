@@ -120,7 +120,7 @@ fun NewSongItem(
             )
 
             Text(
-                text = song.artist + "test",
+                text = song.artist,
                 color = Color(0xFFB3B3B3),
                 textAlign = TextAlign.Center,
                 fontFamily = FontFamily(Font(R.font.poppins_regular)),

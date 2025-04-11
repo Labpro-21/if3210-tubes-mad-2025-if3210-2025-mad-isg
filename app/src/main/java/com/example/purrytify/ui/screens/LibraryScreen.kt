@@ -16,6 +16,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,6 +27,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,14 +55,32 @@ fun LibraryScreen(
     ),
     onSongSelected: (Song) -> Unit ={}
 ) {
-    // State untuk tab yang dipilih
+    // State for tab that is selected
     var selectedTab by remember { mutableStateOf("All") }
     var showUploadDialog by remember { mutableStateOf(false) }
 
-    // Ambil data dari ViewModel
+    // Search state
+    var searchQuery by remember { mutableStateOf("") }
+    var isSearchActive by remember { mutableStateOf(false) }
+
+    // Get data from ViewModel
     val songs by libraryViewModel.songs.collectAsState()
     val currentSong by mainViewModel.currentSong.collectAsState()
     val isPlaying by mainViewModel.isPlaying.collectAsState()
+
+    // Filter songs based on search query
+    val filteredSongs = remember(songs, searchQuery, selectedTab) {
+        val filteredByTab = if (selectedTab == "All") songs else songs.filter { it.isLiked }
+
+        if (searchQuery.isBlank()) {
+            filteredByTab
+        } else {
+            filteredByTab.filter { song ->
+                song.title.contains(searchQuery, ignoreCase = true) ||
+                        song.artist.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -90,6 +112,50 @@ fun LibraryScreen(
                 }
             }
 
+            // Search bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = {
+                    searchQuery = it
+                    isSearchActive = it.isNotEmpty()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                placeholder = { Text("Search songs or artists", color = Color.Gray) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = Color.Gray
+                    )
+                },
+                trailingIcon = {
+                    if (isSearchActive) {
+                        IconButton(onClick = {
+                            searchQuery = ""
+                            isSearchActive = false
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Clear,
+                                contentDescription = "Clear search",
+                                tint = Color.Gray
+                            )
+                        }
+                    }
+                },
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.Gray,
+                    unfocusedBorderColor = Color.Gray,
+                    cursorColor = Color.White,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                )
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             // Tabs (All/Liked)
             LibraryTabs(
                 selectedTab = selectedTab,
@@ -101,18 +167,38 @@ fun LibraryScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
+                    .padding(top = 8.dp)
             ) {
-                val displayedSongs = if (selectedTab == "All") songs else songs.filter { it.isLiked }
-
-                items(displayedSongs) { song ->
-                    SongItem(
-                        song = song.copy(isPlaying = currentSong?.id == song.id && isPlaying),
-                        onSongClick = { clickedSong ->
-                            libraryViewModel.playSong(clickedSong)
-                            onSongSelected(clickedSong)
-                            mainViewModel.playSong(clickedSong)
+                // Display filtered songs
+                if (filteredSongs.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (isSearchActive)
+                                    "No songs found matching \"$searchQuery\""
+                                else
+                                    "No songs in your library",
+                                color = Color.Gray,
+                                fontSize = 16.sp
+                            )
                         }
-                    )
+                    }
+                } else {
+                    items(filteredSongs) { song ->
+                        SongItem(
+                            song = song.copy(isPlaying = currentSong?.id == song.id && isPlaying),
+                            onSongClick = { clickedSong ->
+                                libraryViewModel.playSong(clickedSong)
+                                onSongSelected(clickedSong)
+                                mainViewModel.playSong(clickedSong)
+                            }
+                        )
+                    }
                 }
             }
 

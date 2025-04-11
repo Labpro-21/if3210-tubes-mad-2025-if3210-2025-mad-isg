@@ -1,7 +1,9 @@
 package com.example.purrytify
 
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,21 +14,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.compose.rememberNavController
+import com.example.purrytify.receivers.SongCompletionReceiver
 import com.example.purrytify.service.TokenRefreshService
 import com.example.purrytify.ui.components.BottomNavbar
 import com.example.purrytify.ui.components.MiniPlayer
 import com.example.purrytify.ui.components.NoInternetConnection
 import com.example.purrytify.ui.navigation.AppNavigation
 import com.example.purrytify.ui.screens.LoginScreen
+import com.example.purrytify.ui.screens.PlayerScreen
 import com.example.purrytify.ui.theme.PurrytifyTheme
 import com.example.purrytify.util.EventBus
 import com.example.purrytify.util.NetworkConnectionObserver
@@ -36,21 +41,24 @@ import com.example.purrytify.viewmodels.MainViewModel
 import com.example.purrytify.viewmodels.ViewModelFactory
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import android.util.Log
 import androidx.lifecycle.ViewModelProvider
 
 class MainActivity : ComponentActivity() {
+    private val TAG = "MainActivity"
     private lateinit var tokenManager: TokenManager
     private lateinit var networkConnectionObserver: NetworkConnectionObserver
     private lateinit var mainViewModel: MainViewModel
     private var isLoggedIn = mutableStateOf(false)
     private var isNetworkAvailable = mutableStateOf(true)
+    private lateinit var songCompletionReceiver: SongCompletionReceiver
+    private lateinit var localBroadcastManager: LocalBroadcastManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         tokenManager = (application as PurrytifyApp).tokenManager
         networkConnectionObserver = (application as PurrytifyApp).networkConnectionObserver
+        localBroadcastManager = LocalBroadcastManager.getInstance(this)
 
         isLoggedIn.value = tokenManager.isLoggedIn()
 
@@ -61,6 +69,13 @@ class MainActivity : ComponentActivity() {
 
         // Bind media player service
         mainViewModel.bindService(this)
+
+        // Initialize and register the song completion receiver with LocalBroadcastManager
+        songCompletionReceiver = SongCompletionReceiver(mainViewModel)
+        localBroadcastManager.registerReceiver(
+            songCompletionReceiver,
+            IntentFilter("com.example.purrytify.SONG_COMPLETED")
+        )
 
         // Event Bus for token events
         lifecycleScope.launch {
@@ -84,12 +99,12 @@ class MainActivity : ComponentActivity() {
             EventBus.networkEvents.collectLatest { event ->
                 when (event) {
                     is EventBus.NetworkEvent.Connected -> {
-                        Log.d("NetworkObserver", "Network connected")
+                        Log.d(TAG, "Network connected")
                         isNetworkAvailable.value = true
                         networkConnectionObserver.checkAndUpdateConnectionStatus()
                     }
                     is EventBus.NetworkEvent.Disconnected -> {
-                        Log.d("NetworkObserver", "Network disconnected")
+                        Log.d(TAG, "Network disconnected")
                         isNetworkAvailable.value = false
                     }
                 }
@@ -118,6 +133,9 @@ class MainActivity : ComponentActivity() {
                         val currentSong by mainViewModel.currentSong.collectAsState()
                         val isPlaying by mainViewModel.isPlaying.collectAsState()
 
+                        // State to track if the full player is showing
+                        var showPlayerScreen by remember { mutableStateOf(false) }
+
                         Scaffold(
                             bottomBar = {
                                 Column {
@@ -126,10 +144,8 @@ class MainActivity : ComponentActivity() {
                                             currentSong = currentSong,
                                             isPlaying = isPlaying,
                                             onPlayPauseClick = { mainViewModel.togglePlayPause() },
-                                            onPlayerClick = { /* Navigate to full player */ }
+                                            onPlayerClick = { showPlayerScreen = true }
                                         )
-                                    } else {
-                                        Text("Debug: currentSong is null", color = Color.Red)
                                     }
 
                                     BottomNavbar(navController = navController)
@@ -146,6 +162,13 @@ class MainActivity : ComponentActivity() {
                                     navController = navController,
                                     networkConnectionObserver = networkConnectionObserver,
                                 )
+
+                                // Show the full player screen if needed
+                                if (showPlayerScreen) {
+                                    PlayerScreen(
+                                        onDismiss = { showPlayerScreen = false }
+                                    )
+                                }
                             }
                         }
                     } else {
@@ -174,8 +197,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // Unregister the broadcast receiver using LocalBroadcastManager
+        try {
+            localBroadcastManager.unregisterReceiver(songCompletionReceiver)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error unregistering receiver: ${e.message}")
+        }
+
         networkConnectionObserver.stop()
         stopTokenRefreshService()
+        mainViewModel.unbindService(this)
     }
 
     private fun startTokenRefreshService() {
@@ -192,7 +223,6 @@ class MainActivity : ComponentActivity() {
         stopTokenRefreshService()
         tokenManager.deleteTokens()
         isLoggedIn.value = false
-
 
         val intent = Intent(this, MainActivity::class.java)
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)

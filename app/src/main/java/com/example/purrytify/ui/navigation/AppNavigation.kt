@@ -13,11 +13,13 @@ import com.example.purrytify.ui.screens.ProfileScreen
 import com.example.purrytify.util.NetworkConnectionObserver
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import com.example.purrytify.ui.screens.QueueScreen
 
 object Destinations {
     const val HOME_ROUTE = "home"
     const val LIBRARY_ROUTE = "library"
     const val PROFILE_ROUTE = "profile"
+    const val QUEUE_ROUTE = "queue"
 }
 
 @Composable
@@ -47,6 +49,11 @@ fun AppNavigation(
             } else {
                 NoInternetScreen()
             }
+        }
+        composable(Destinations.QUEUE_ROUTE) {
+            QueueScreen(
+                onNavigateBack = { navController.navigateUp() }
+            )
         }
     }
 }

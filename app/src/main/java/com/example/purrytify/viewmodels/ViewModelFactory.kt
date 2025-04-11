@@ -40,8 +40,8 @@ class ViewModelFactory(private val context: Context) : ViewModelProvider.Factory
                 HomeViewModel(app.songRepository) as T
             }
             modelClass.isAssignableFrom(MainViewModel::class.java) -> {
-                // MainViewModel doesn't need any special dependencies
-                MainViewModel() as T
+                val app = context.applicationContext as PurrytifyApp
+                MainViewModel(app.songRepository) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }

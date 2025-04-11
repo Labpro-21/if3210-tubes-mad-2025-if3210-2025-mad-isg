@@ -3,6 +3,7 @@ package com.example.purrytify.viewmodels
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.purrytify.data.entity.Song as EntitySong
@@ -13,10 +14,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-/**
- * ViewModel untuk mengelola data HomeScreen
- * Menyediakan akses ke daftar lagu terbaru dan recently played
- */
 class HomeViewModel(private val songRepository: SongRepository) : ViewModel() {
 
     // ID lagu yang sedang diputar
@@ -34,37 +31,28 @@ class HomeViewModel(private val songRepository: SongRepository) : ViewModel() {
     private val _recentlyPlayed = MutableLiveData<List<Song>>(emptyList())
     val recentlyPlayed: LiveData<List<Song>> = _recentlyPlayed
 
-    init {
-        // Load initial data
-        loadSongs()
+    // Store observers so we can clean them up
+    private val allSongsObserver = Observer<List<EntitySong>> { entityList ->
+        Log.d("HomeViewModel", "All songs updated, count: ${entityList.size}")
+        _allSongs.value = convertToModelSongs(entityList)
+    }
 
+    private val recentlyPlayedObserver = Observer<List<EntitySong>> { entityList ->
+        Log.d("HomeViewModel", "Recently played updated, count: ${entityList.size}")
+        _recentlyPlayed.value = convertToModelSongs(entityList)
+    }
+
+    init {
         // Set up observers for repository data
         setupObservers()
     }
 
     private fun setupObservers() {
         // Observe allSongs from repository
-        songRepository.allSongs.observeForever { entityList ->
-            Log.d("HomeViewModel", "All songs updated, count: ${entityList.size}")
-            _allSongs.value = convertToModelSongs(entityList)
-        }
+        songRepository.allSongs.observeForever(allSongsObserver)
 
         // Observe recentlyPlayed from repository
-        songRepository.recentlyPlayed.observeForever { entityList ->
-            Log.d("HomeViewModel", "Recently played updated, count: ${entityList.size}")
-            _recentlyPlayed.value = convertToModelSongs(entityList)
-        }
-    }
-
-    private fun loadSongs() {
-        viewModelScope.launch {
-            try {
-                // We'll just wait for the observers to update the LiveData
-                Log.d("HomeViewModel", "Loading songs")
-            } catch (e: Exception) {
-                Log.e("HomeViewModel", "Error loading songs", e)
-            }
-        }
+        songRepository.recentlyPlayed.observeForever(recentlyPlayedObserver)
     }
 
     private fun convertToModelSongs(entityList: List<EntitySong>): List<Song> {
@@ -136,8 +124,8 @@ class HomeViewModel(private val songRepository: SongRepository) : ViewModel() {
 
     override fun onCleared() {
         super.onCleared()
-        // Remove observers to prevent memory leaks
-        songRepository.allSongs.removeObserver { }
-        songRepository.recentlyPlayed.removeObserver { }
+        // Properly remove observers to prevent memory leaks
+        songRepository.allSongs.removeObserver(allSongsObserver)
+        songRepository.recentlyPlayed.removeObserver(recentlyPlayedObserver)
     }
 }

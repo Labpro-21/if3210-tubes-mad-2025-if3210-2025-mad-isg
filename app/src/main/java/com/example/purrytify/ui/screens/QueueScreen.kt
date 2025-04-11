@@ -1,6 +1,10 @@
 package com.example.purrytify.ui.screens
 
 import androidx.activity.ComponentActivity
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,16 +16,25 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,6 +49,7 @@ import com.example.purrytify.ui.theme.BACKGROUND_COLOR
 import com.example.purrytify.ui.theme.GREEN_COLOR
 import com.example.purrytify.viewmodels.MainViewModel
 import com.example.purrytify.viewmodels.ViewModelFactory
+import kotlinx.coroutines.delay
 
 @Composable
 fun QueueScreen(
@@ -48,6 +62,40 @@ fun QueueScreen(
     val queue by mainViewModel.queue.collectAsState()
     val currentSong by mainViewModel.currentSong.collectAsState()
     val isPlaying by mainViewModel.isPlaying.collectAsState()
+    val currentQueueIndex = remember { mutableStateOf(-1) }
+
+    // State for confirm clear dialog
+    var showClearConfirmDialog by remember { mutableStateOf(false) }
+
+    // State for showing feedback when changes are made
+    var showFeedback by remember { mutableStateOf(false) }
+    var feedbackMessage by remember { mutableStateOf("") }
+
+    // Find current song index in queue
+    LaunchedEffect(currentSong, queue) {
+        currentSong?.let { song ->
+            val index = queue.indexOfFirst { it.id == song.id }
+            currentQueueIndex.value = index
+        }
+    }
+
+    // Scrolling state for the list
+    val listState = rememberLazyListState()
+
+    // Scroll to current song
+    LaunchedEffect(currentQueueIndex.value) {
+        if (currentQueueIndex.value > 0) {
+            listState.animateScrollToItem(currentQueueIndex.value)
+        }
+    }
+
+    // Handle feedback display
+    LaunchedEffect(showFeedback) {
+        if (showFeedback) {
+            delay(2000)
+            showFeedback = false
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -83,7 +131,9 @@ fun QueueScreen(
                 // Clear queue button
                 IconButton(
                     onClick = {
-                        mainViewModel.clearQueue()
+                        if (queue.isNotEmpty()) {
+                            showClearConfirmDialog = true
+                        }
                     }
                 ) {
                     Icon(
@@ -145,7 +195,8 @@ fun QueueScreen(
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    state = listState
                 ) {
                     itemsIndexed(queue) { index, song ->
                         // Skip the current song as it's already displayed in Now Playing
@@ -157,6 +208,8 @@ fun QueueScreen(
                                 },
                                 onRemoveSong = {
                                     mainViewModel.removeFromQueue(index)
+                                    feedbackMessage = "Song removed from queue"
+                                    showFeedback = true
                                 }
                             )
                         }
@@ -165,7 +218,63 @@ fun QueueScreen(
             }
 
             // Bottom space for mini player
-            Spacer(modifier = Modifier.height(60.dp))
+            Spacer(modifier = Modifier.height(80.dp))
+        }
+
+        // Confirm clear queue dialog
+        if (showClearConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { showClearConfirmDialog = false },
+                title = { Text("Clear Queue") },
+                text = { Text("Are you sure you want to clear the entire queue?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            mainViewModel.clearQueue()
+                            showClearConfirmDialog = false
+                            feedbackMessage = "Queue cleared"
+                            showFeedback = true
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = GREEN_COLOR)
+                    ) {
+                        Text("Clear")
+                    }
+                },
+                dismissButton = {
+                    Button(
+                        onClick = { showClearConfirmDialog = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
+                    ) {
+                        Text("Cancel")
+                    }
+                },
+                containerColor = Color(0xFF2A2A2A),
+                titleContentColor = Color.White,
+                textContentColor = Color.White
+            )
+        }
+
+        // Feedback toast
+        AnimatedVisibility(
+            visible = showFeedback,
+            enter = fadeIn(animationSpec = tween(durationMillis = 200)),
+            exit = fadeOut(animationSpec = tween(durationMillis = 200)),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .background(GREEN_COLOR.copy(alpha = 0.9f), shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = feedbackMessage,
+                    color = Color.White,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
     }
 }

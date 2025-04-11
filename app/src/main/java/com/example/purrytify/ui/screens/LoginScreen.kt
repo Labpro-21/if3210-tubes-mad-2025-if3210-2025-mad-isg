@@ -57,7 +57,7 @@ import com.example.purrytify.viewmodels.ViewModelFactory
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     loginViewModel: LoginViewModel = viewModel(
-        factory = ViewModelFactory(LocalContext.current)
+        factory = ViewModelFactory.getInstance(LocalContext.current)
     )
 ) {
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp

@@ -19,7 +19,8 @@ import com.example.purrytify.ui.theme.BACKGROUND_COLOR
 @Composable
 fun NewSongs(
     songs: List<Song>,
-    onSongClick: (Song) -> Unit
+    onSongClick: (Song) -> Unit,
+    onAddToQueue: ((Song) -> Unit)? = null
 ) {
     LazyRow(
         modifier = Modifier
@@ -42,7 +43,8 @@ fun NewSongs(
             ) {
                 NewSongItem(
                     song = song,
-                    onClick = { onSongClick(song) }
+                    onClick = { onSongClick(song) },
+                    onAddToQueue = onAddToQueue?.let { addFn -> { addFn(song) } }
                 )
             }
         }

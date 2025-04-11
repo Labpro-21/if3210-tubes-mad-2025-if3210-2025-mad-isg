@@ -16,6 +16,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -27,6 +28,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.purrytify.receivers.SongCompletionReceiver
 import com.example.purrytify.service.TokenRefreshService
 import com.example.purrytify.ui.components.BottomNavbar
+import com.example.purrytify.ui.components.LoadingScreen
 import com.example.purrytify.ui.components.MiniPlayer
 import com.example.purrytify.ui.components.NoInternetConnection
 import com.example.purrytify.ui.navigation.AppNavigation
@@ -39,8 +41,11 @@ import com.example.purrytify.util.TokenManager
 import androidx.compose.ui.platform.LocalContext
 import com.example.purrytify.viewmodels.MainViewModel
 import com.example.purrytify.viewmodels.ViewModelFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.lifecycle.ViewModelProvider
 
 class MainActivity : ComponentActivity() {
@@ -48,75 +53,18 @@ class MainActivity : ComponentActivity() {
     private lateinit var tokenManager: TokenManager
     private lateinit var networkConnectionObserver: NetworkConnectionObserver
     private lateinit var mainViewModel: MainViewModel
-    private var isLoggedIn = mutableStateOf(false)
-    private var isNetworkAvailable = mutableStateOf(true)
+    private val isLoggedIn = mutableStateOf(false)
+    private val isNetworkAvailable = mutableStateOf(true)
+    private val isInitialized = mutableStateOf(false)
     private lateinit var songCompletionReceiver: SongCompletionReceiver
     private lateinit var localBroadcastManager: LocalBroadcastManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        tokenManager = (application as PurrytifyApp).tokenManager
-        networkConnectionObserver = (application as PurrytifyApp).networkConnectionObserver
-        localBroadcastManager = LocalBroadcastManager.getInstance(this)
-
-        isLoggedIn.value = tokenManager.isLoggedIn()
-
-        mainViewModel = ViewModelProvider(
-            this,
-            ViewModelFactory.getInstance(applicationContext)
-        ).get(MainViewModel::class.java)
-
-        // Bind media player service
-        mainViewModel.bindService(this)
-
-        // Initialize and register the song completion receiver with LocalBroadcastManager
-        songCompletionReceiver = SongCompletionReceiver(mainViewModel)
-        localBroadcastManager.registerReceiver(
-            songCompletionReceiver,
-            IntentFilter("com.example.purrytify.SONG_COMPLETED")
-        )
-
-        // Event Bus for token events
-        lifecycleScope.launch {
-            EventBus.tokenEvents.collectLatest { event ->
-                when (event) {
-                    is EventBus.TokenEvent.TokenRefreshFailed -> {
-                        // Show toast message and log out
-                        Toast.makeText(
-                            this@MainActivity,
-                            "Session expired. Please log in again.",
-                            Toast.LENGTH_LONG
-                        ).show()
-                        logout()
-                    }
-                }
-            }
-        }
-
-        // Event Bus for network events
-        lifecycleScope.launch {
-            EventBus.networkEvents.collectLatest { event ->
-                when (event) {
-                    is EventBus.NetworkEvent.Connected -> {
-                        Log.d(TAG, "Network connected")
-                        isNetworkAvailable.value = true
-                        networkConnectionObserver.checkAndUpdateConnectionStatus()
-                    }
-                    is EventBus.NetworkEvent.Disconnected -> {
-                        Log.d(TAG, "Network disconnected")
-                        isNetworkAvailable.value = false
-                    }
-                }
-            }
-        }
-
-        // Start observing network connection
-        networkConnectionObserver.start()
-
-        // Start token refresh service if logged in
-        if (isLoggedIn.value) {
-            startTokenRefreshService()
+        // Lightweight initialization first
+        lifecycleScope.launch(Dispatchers.Default) {
+            initializeApp()
         }
 
         setContent {
@@ -125,6 +73,12 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                    // Show loading screen while initializing
+                    if (!isInitialized.value) {
+                        LoadingScreen()
+                        return@Surface
+                    }
+
                     val networkStatus by networkConnectionObserver.isConnected.collectAsState()
 
                     if (isLoggedIn.value) {
@@ -166,7 +120,8 @@ class MainActivity : ComponentActivity() {
                                 // Show the full player screen if needed
                                 if (showPlayerScreen) {
                                     PlayerScreen(
-                                        onDismiss = { showPlayerScreen = false }
+                                        onDismiss = { showPlayerScreen = false },
+                                        navController = navController
                                     )
                                 }
                             }
@@ -175,7 +130,10 @@ class MainActivity : ComponentActivity() {
                         LoginScreen(
                             onLoginSuccess = {
                                 isLoggedIn.value = true
-                                startTokenRefreshService()
+                                // Only start token service after successful login
+                                lifecycleScope.launch(Dispatchers.IO) {
+                                    startTokenRefreshService()
+                                }
 
                                 // Check network status after login
                                 networkConnectionObserver.checkAndUpdateConnectionStatus()
@@ -187,11 +145,107 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private suspend fun initializeApp() {
+        try {
+            Log.d(TAG, "Starting app initialization")
+
+            // Initialize lightweight components first
+            withContext(Dispatchers.Main) {
+                tokenManager = (application as PurrytifyApp).tokenManager
+                networkConnectionObserver = (application as PurrytifyApp).networkConnectionObserver
+                localBroadcastManager = LocalBroadcastManager.getInstance(this@MainActivity)
+
+                // Check login status (simple operation)
+                isLoggedIn.value = tokenManager.isLoggedIn()
+            }
+
+            // Initialize network observer (non-blocking)
+            networkConnectionObserver.start()
+
+            // Initialize MainViewModel (potentially heavy)
+            withContext(Dispatchers.Main) {
+                mainViewModel = ViewModelProvider(
+                    this@MainActivity,
+                    ViewModelFactory.getInstance(applicationContext)
+                ).get(MainViewModel::class.java)
+
+                // Bind media player service
+                mainViewModel.bindService(this@MainActivity)
+            }
+
+            // Initialize broadcast receiver for song completion
+            withContext(Dispatchers.Main) {
+                songCompletionReceiver = SongCompletionReceiver(mainViewModel)
+                localBroadcastManager.registerReceiver(
+                    songCompletionReceiver,
+                    IntentFilter("com.example.purrytify.SONG_COMPLETED")
+                )
+            }
+
+            // Setup EventBus listeners
+            setupEventBusListeners()
+
+            // Only start token service if user is logged in
+            if (isLoggedIn.value) {
+                startTokenRefreshService()
+            }
+
+            // Mark initialization as complete
+            isInitialized.value = true
+            Log.d(TAG, "App initialization completed")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during initialization: ${e.message}")
+            // Even on error, we need to mark as initialized to show login screen
+            isInitialized.value = true
+        }
+    }
+
+    private fun setupEventBusListeners() {
+        // Event Bus for token events
+        lifecycleScope.launch {
+            EventBus.tokenEvents.collectLatest { event ->
+                when (event) {
+                    is EventBus.TokenEvent.TokenRefreshFailed -> {
+                        // Show toast message and log out
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Session expired. Please log in again.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            logout()
+                        }
+                    }
+                }
+            }
+        }
+
+        // Event Bus for network events
+        lifecycleScope.launch {
+            EventBus.networkEvents.collectLatest { event ->
+                when (event) {
+                    is EventBus.NetworkEvent.Connected -> {
+                        Log.d(TAG, "Network connected")
+                        isNetworkAvailable.value = true
+                        networkConnectionObserver.checkAndUpdateConnectionStatus()
+                    }
+                    is EventBus.NetworkEvent.Disconnected -> {
+                        Log.d(TAG, "Network disconnected")
+                        isNetworkAvailable.value = false
+                    }
+                }
+            }
+        }
+    }
+
     override fun onResume() {
         super.onResume()
-        // Check is service running and start if not
-        if (tokenManager.isLoggedIn()) {
-            startTokenRefreshService()
+        // Check is service running and start if not, but only if initialized and logged in
+        if (isInitialized.value && tokenManager.isLoggedIn()) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                startTokenRefreshService()
+            }
         }
     }
 

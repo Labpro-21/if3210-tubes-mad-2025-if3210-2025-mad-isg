@@ -28,6 +28,10 @@ class MediaPlayerService : Service() {
     private val _duration = MutableStateFlow(0)
     val duration: StateFlow<Int> = _duration
 
+    // Flags for the end of playback
+    private val _reachedEndOfPlayback = MutableStateFlow(false)
+    val reachedEndOfPlayback: StateFlow<Boolean> = _reachedEndOfPlayback
+
     // Bonus features state
     private var shuffleEnabled = false
     private var repeatMode = 0 // 0: off, 1: repeat all, 2: repeat one
@@ -62,11 +66,20 @@ class MediaPlayerService : Service() {
                     // Replay the same song
                     playAgain()
                 }
-            } else {
-                // Send local broadcast instead of system-wide broadcast
+            } else if (repeatMode == 1) {
+                // In Repeat All mode, send broadcast to proceed to next song
+                Log.d(TAG, "Repeat All mode active, proceeding to next song")
                 val intent = Intent("com.example.purrytify.SONG_COMPLETED")
                 localBroadcastManager.sendBroadcast(intent)
-                Log.d(TAG, "Sent song completion broadcast via LocalBroadcastManager")
+            } else {
+                // In no-repeat mode (0), check if we're at the end
+                Log.d(TAG, "No repeat mode, checking if we need to stop")
+                // We'll set a flag that can be checked by the ViewModel
+                _reachedEndOfPlayback.value = true
+                // Still send the completion broadcast to let ViewModel handle the situation
+                val intent = Intent("com.example.purrytify.SONG_COMPLETED")
+                intent.putExtra("END_OF_PLAYBACK", true)
+                localBroadcastManager.sendBroadcast(intent)
             }
         }
 
@@ -80,6 +93,9 @@ class MediaPlayerService : Service() {
     fun playSong(song: Song) {
         try {
             Log.d(TAG, "Playing song: ${song.title}, path: ${song.filePath}")
+            // Reset end of playback flag when starting a new song
+            _reachedEndOfPlayback.value = false
+
             // Reset media player if currently playing another song
             mediaPlayer.reset()
 
@@ -165,6 +181,38 @@ class MediaPlayerService : Service() {
         repeatMode = mode
     }
 
+    // Reset the end of playback flag
+    fun resetEndOfPlaybackFlag() {
+        _reachedEndOfPlayback.value = false
+    }
+
+    // Method to stop playback and move to end of track
+    fun stopPlayback() {
+        try {
+            if (mediaPlayer.isPlaying) {
+                // Get the total duration of the current song
+                val totalDuration = mediaPlayer.duration
+
+                // Seek to the end of the track
+                mediaPlayer.seekTo(totalDuration)
+
+                // Pause playback
+                mediaPlayer.pause()
+
+                // Update states
+                _isPlaying.value = false
+                _currentPosition.value = totalDuration
+                _reachedEndOfPlayback.value = true
+
+                Log.d(TAG, "Playback stopped and moved to end of track")
+            } else {
+                Log.d(TAG, "No need to stop playback, already paused")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error stopping playback: ${e.message}")
+        }
+    }
+
     private fun startPositionTracking() {
         Thread {
             while (mediaPlayer.isPlaying) {
@@ -189,4 +237,5 @@ class MediaPlayerService : Service() {
         mediaPlayer.release()
         super.onDestroy()
     }
+
 }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,9 +13,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,8 +38,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.text.style.TextAlign
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
@@ -41,20 +52,24 @@ import java.io.File
 @Composable
 fun NewSongItem(
     song: Song,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onAddToQueue: (() -> Unit)? = null
 ) {
+    var showOptions by remember { mutableStateOf(false) }
+    var showAddToQueueDialog by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
     ) {
-        // Cover Art
+        // Cover Art with controls overlay
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
                 .clip(RoundedCornerShape(4.dp))
                 .background(BACKGROUND_COLOR)
+                .clickable { onClick() }
         ) {
             val context = LocalContext.current
             val painter = if (song.coverUrl.startsWith("http")) {
@@ -101,6 +116,68 @@ fun NewSongItem(
                     )
                 }
             }
+
+            // Queue button overlay (only shown when onAddToQueue is provided)
+            if (onAddToQueue != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(4.dp),
+                    contentAlignment = Alignment.TopEnd
+                ) {
+                    IconButton(
+                        onClick = { showOptions = true },
+                        modifier = Modifier
+                            .size(32.dp)
+                            .background(
+                                color = Color.Black.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "More Options",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    // Dropdown menu
+                    DropdownMenu(
+                        expanded = showOptions,
+                        onDismissRequest = { showOptions = false },
+                        modifier = Modifier.background(Color(0xFF333333))
+                    ) {
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.QueueMusic,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Add to Queue",
+                                        color = Color.White,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                            },
+                            onClick = {
+                                if (showAddToQueueDialog) {
+                                    showAddToQueueDialog = true
+                                    showOptions = false
+                                } else {
+                                    onAddToQueue()
+                                    showOptions = false
+                                }
+                            }
+                        )
+                    }
+                }
+            }
         }
 
         // Song Info
@@ -131,5 +208,17 @@ fun NewSongItem(
 
             Spacer(Modifier.height(15.dp))
         }
+    }
+
+    // Show Add to Queue dialog if requested
+    if (showAddToQueueDialog && onAddToQueue != null) {
+        AddToQueueDialog(
+            song = song,
+            onDismiss = { showAddToQueueDialog = false },
+            onAddToQueue = {
+                onAddToQueue()
+                showAddToQueueDialog = false
+            }
+        )
     }
 }

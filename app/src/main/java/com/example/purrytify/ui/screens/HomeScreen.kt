@@ -11,10 +11,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,6 +39,7 @@ import com.example.purrytify.ui.theme.BACKGROUND_COLOR
 import com.example.purrytify.viewmodels.HomeViewModel
 import com.example.purrytify.viewmodels.MainViewModel
 import com.example.purrytify.viewmodels.ViewModelFactory
+import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen() {
@@ -51,6 +58,13 @@ fun HomeScreen() {
     // Observe data dari ViewModels
     val allSongs by homeViewModel.allSongs.observeAsState(emptyList())
     val recentlyPlayed by homeViewModel.recentlyPlayed.observeAsState(emptyList())
+    val currentSong by mainViewModel.currentSong.collectAsState()
+    val isPlaying by mainViewModel.isPlaying.collectAsState()
+
+    // For showing feedback when adding to queue
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var showQueueToast by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -82,6 +96,12 @@ fun HomeScreen() {
                     songs = allSongs,
                     onSongClick = { song ->
                         playSong(song, homeViewModel, mainViewModel)
+                    },
+                    onAddToQueue = { song ->
+                        mainViewModel.addToQueue(song)
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Added to queue: ${song.title}")
+                        }
                     }
                 )
 
@@ -106,9 +126,18 @@ fun HomeScreen() {
             if (recentlyPlayed.isNotEmpty()) {
                 items(recentlyPlayed) { song ->
                     SongItem(
-                        song = song,
+                        song = song.copy(isPlaying = currentSong?.id == song.id && isPlaying),
                         onSongClick = { clickedSong ->
                             playSong(clickedSong, homeViewModel, mainViewModel)
+                        },
+                        onAddToQueue = { queuedSong ->
+                            mainViewModel.addToQueue(queuedSong)
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Added to queue: ${queuedSong.title}")
+                            }
+                        },
+                        onToggleLike = { likedSong, isLiked ->
+                            mainViewModel.toggleLike(likedSong.id, isLiked)
                         }
                     )
                 }
@@ -132,6 +161,14 @@ fun HomeScreen() {
                 Spacer(modifier = Modifier.height(80.dp))
             }
         }
+
+        // Snackbar for showing queue messages
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 80.dp)
+        )
     }
 }
 
@@ -152,5 +189,5 @@ private fun playSong(
 
     // Update lagu yang sedang diputar di MainViewModel
     // agar bisa diakses dari komponen lain seperti MiniPlayer
-    mainViewModel.setCurrentSong(song)
+    mainViewModel.playSong(song)
 }

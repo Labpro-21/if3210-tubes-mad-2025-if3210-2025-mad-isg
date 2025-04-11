@@ -18,23 +18,50 @@ class TokenRefreshService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var job: Job? = null
 
+    // Flag to indicate service is initialized
+    private var isInitialized = false
+
     companion object {
         private const val TOKEN_CHECK_INTERVAL = 30_000L // 30 seconds
+        private const val INITIAL_DELAY = 5_000L // 5 second initial delay
     }
 
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "TokenRefreshService created")
 
-        tokenManager = (application as com.example.purrytify.PurrytifyApp).tokenManager
-        authRepository = AuthRepository(tokenManager)
+        // Defer heavy initialization for later
+        serviceScope.launch(Dispatchers.IO) {
+            initializeService()
+        }
+    }
+
+    private suspend fun initializeService() {
+        try {
+            withContext(Dispatchers.IO) {
+                tokenManager = (application as com.example.purrytify.PurrytifyApp).tokenManager
+                authRepository = AuthRepository(tokenManager)
+                isInitialized = true
+                Log.d(TAG, "TokenRefreshService initialized")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error initializing service: ${e.message}")
+            stopSelf()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "TokenRefreshService started")
 
-        // Start token checking
-        startTokenChecking()
+        // Start token checking with delay to avoid blocking startup
+        serviceScope.launch {
+            // Wait for service to initialize and add initial delay
+            delay(INITIAL_DELAY)
+            if (!isInitialized) {
+                initializeService()
+            }
+            startTokenChecking()
+        }
 
         // if the service is killed, restart it with the last intent
         return START_STICKY
@@ -59,6 +86,12 @@ class TokenRefreshService : Service() {
         // Start a new coroutine to check the token status
         job = serviceScope.launch {
             while (isActive) {
+                if (!isInitialized) {
+                    Log.d(TAG, "Service not initialized yet, delaying token check")
+                    delay(1000)
+                    continue
+                }
+
                 Log.d(TAG, "Checking token status...")
 
                 if (!tokenManager.isLoggedIn()) {
@@ -120,7 +153,6 @@ class TokenRefreshService : Service() {
             // If the refresh token fails, log the user out
             Log.d(TAG, "User logged out due to token refresh failure")
             stopSelf()
-
         }
     }
 }

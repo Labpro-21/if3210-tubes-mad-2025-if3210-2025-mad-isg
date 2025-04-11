@@ -29,10 +29,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -43,6 +46,7 @@ import com.example.purrytify.ui.components.UploadSongDialog
 import com.example.purrytify.viewmodels.LibraryViewModel
 import com.example.purrytify.viewmodels.MainViewModel
 import com.example.purrytify.viewmodels.ViewModelFactory
+import kotlinx.coroutines.launch
 
 @Composable
 fun LibraryScreen(
@@ -53,7 +57,7 @@ fun LibraryScreen(
         viewModelStoreOwner = LocalContext.current as ComponentActivity,
         factory = ViewModelFactory.getInstance(LocalContext.current)
     ),
-    onSongSelected: (Song) -> Unit ={}
+    onSongSelected: (Song) -> Unit = {}
 ) {
     // State for tab that is selected
     var selectedTab by remember { mutableStateOf("All") }
@@ -62,6 +66,10 @@ fun LibraryScreen(
     // Search state
     var searchQuery by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
+
+    // For showing feedback when adding to queue
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // Get data from ViewModel
     val songs by libraryViewModel.songs.collectAsState()
@@ -196,6 +204,15 @@ fun LibraryScreen(
                                 libraryViewModel.playSong(clickedSong)
                                 onSongSelected(clickedSong)
                                 mainViewModel.playSong(clickedSong)
+                            },
+                            onAddToQueue = { queuedSong ->
+                                mainViewModel.addToQueue(queuedSong)
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Added to queue: ${queuedSong.title}")
+                                }
+                            },
+                            onToggleLike = { likedSong, isLiked ->
+                                mainViewModel.toggleLike(likedSong.id, isLiked)
                             }
                         )
                     }
@@ -214,9 +231,20 @@ fun LibraryScreen(
                 onDismiss = { showUploadDialog = false },
                 onSaveClick = { title, artist, filePath, artworkPath, duration ->
                     libraryViewModel.addSong(title, artist, filePath, artworkPath, duration)
+                    scope.launch {
+                        snackbarHostState.showSnackbar("Song added: $title")
+                    }
                     showUploadDialog = false
                 }
             )
         }
+
+        // Snackbar for showing messages
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 80.dp)
+        )
     }
 }

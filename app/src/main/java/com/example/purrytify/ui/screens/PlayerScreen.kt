@@ -25,11 +25,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.purrytify.QueueScreenActivity
 import com.example.purrytify.R
 import com.example.purrytify.models.Song
+import com.example.purrytify.ui.navigation.Destinations
 import com.example.purrytify.ui.theme.BACKGROUND_COLOR
 import com.example.purrytify.ui.theme.GREEN_COLOR
 import com.example.purrytify.viewmodels.MainViewModel
@@ -37,11 +38,13 @@ import com.example.purrytify.viewmodels.ViewModelFactory
 import java.io.File
 import java.util.concurrent.TimeUnit
 import androidx.activity.ComponentActivity
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerScreen(
     onDismiss: () -> Unit,
+    navController: NavController? = null,
     mainViewModel: MainViewModel = viewModel(
         viewModelStoreOwner = LocalContext.current as ComponentActivity,
         factory = ViewModelFactory.getInstance(LocalContext.current)
@@ -51,6 +54,9 @@ fun PlayerScreen(
     val isPlaying by mainViewModel.isPlaying.collectAsState()
     val currentPosition by mainViewModel.currentPosition.collectAsState()
     val duration by mainViewModel.duration.collectAsState()
+    val queue by mainViewModel.queue.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     // Modified to track if the song is liked
     val isLiked = remember { mutableStateOf(currentSong?.isLiked ?: false) }
@@ -63,7 +69,8 @@ fun PlayerScreen(
     }
 
     // For repeat mode (bonus feature)
-    var repeatMode by remember { mutableStateOf(0) } // 0: Off, 1: Repeat All, 2: Repeat One
+    val repeatMode by mainViewModel.repeatMode.collectAsState()
+    val shuffleEnabled by mainViewModel.shuffleEnabled.collectAsState()
 
     // Get local context for intent
     val context = LocalContext.current
@@ -120,8 +127,7 @@ fun PlayerScreen(
 
                 // Queue button
                 IconButton(onClick = {
-                    val intent = Intent(context, QueueScreenActivity::class.java)
-                    context.startActivity(intent)
+                    navController?.navigate(Destinations.QUEUE_ROUTE)
                 }) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_queue_music),
@@ -202,6 +208,23 @@ fun PlayerScreen(
                         )
                     }
 
+                    // Add to queue button
+                    IconButton(
+                        onClick = {
+                            mainViewModel.addToQueue(song)
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Added to queue: ${song.title}")
+                            }
+                        }
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_queue_music),
+                            contentDescription = "Add to Queue",
+                            tint = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
                     // Like button
                     IconButton(
                         onClick = {
@@ -272,12 +295,12 @@ fun PlayerScreen(
             ) {
                 // Shuffle button (bonus feature)
                 IconButton(onClick = {
-                    // Placeholder for shuffle
+                    mainViewModel.setShuffleEnabled(!shuffleEnabled)
                 }) {
                     Icon(
                         imageVector = Icons.Filled.Shuffle,
                         contentDescription = "Shuffle",
-                        tint = Color.White,
+                        tint = if (shuffleEnabled) GREEN_COLOR else Color.White,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -335,9 +358,9 @@ fun PlayerScreen(
                 // Repeat button (bonus feature)
                 IconButton(onClick = {
                     // Cycle through repeat modes: Off -> Repeat All -> Repeat One -> Off
-                    repeatMode = (repeatMode + 1) % 3
+                    val newMode = (repeatMode + 1) % 3
                     // Implement repeat functionality in MainViewModel
-                    mainViewModel.setRepeatMode(repeatMode)
+                    mainViewModel.setRepeatMode(newMode)
                 }) {
                     when (repeatMode) {
                         0 -> Icon(
@@ -361,9 +384,15 @@ fun PlayerScreen(
                     }
                 }
             }
-
-
         }
+
+        // Snackbar host for feedback
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 80.dp)
+        )
     }
 }
 

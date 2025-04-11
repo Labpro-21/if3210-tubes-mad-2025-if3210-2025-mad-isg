@@ -37,11 +37,12 @@ import com.example.purrytify.viewmodels.ViewModelFactory
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import android.util.Log
+import androidx.lifecycle.ViewModelProvider
 
 class MainActivity : ComponentActivity() {
     private lateinit var tokenManager: TokenManager
     private lateinit var networkConnectionObserver: NetworkConnectionObserver
-
+    private lateinit var mainViewModel: MainViewModel
     private var isLoggedIn = mutableStateOf(false)
     private var isNetworkAvailable = mutableStateOf(true)
 
@@ -52,6 +53,14 @@ class MainActivity : ComponentActivity() {
         networkConnectionObserver = (application as PurrytifyApp).networkConnectionObserver
 
         isLoggedIn.value = tokenManager.isLoggedIn()
+
+        mainViewModel = ViewModelProvider(
+            this,
+            ViewModelFactory.getInstance(applicationContext)
+        ).get(MainViewModel::class.java)
+
+        // Bind media player service
+        mainViewModel.bindService(this)
 
         // Event Bus for token events
         lifecycleScope.launch {
@@ -105,12 +114,9 @@ class MainActivity : ComponentActivity() {
 
                     if (isLoggedIn.value) {
                         val navController = rememberNavController()
-                        val viewModel: MainViewModel = viewModel(
-                            factory = ViewModelFactory.getInstance(LocalContext.current)
-                        )
 
-                        val currentSong = viewModel.currentSong.collectAsState().value
-                        val isPlaying = viewModel.isPlaying.collectAsState().value
+                        val currentSong by mainViewModel.currentSong.collectAsState()
+                        val isPlaying by mainViewModel.isPlaying.collectAsState()
 
                         Scaffold(
                             bottomBar = {
@@ -119,7 +125,7 @@ class MainActivity : ComponentActivity() {
                                         MiniPlayer(
                                             currentSong = currentSong,
                                             isPlaying = isPlaying,
-                                            onPlayPauseClick = { viewModel.togglePlayPause() },
+                                            onPlayPauseClick = { mainViewModel.togglePlayPause() },
                                             onPlayerClick = { /* Navigate to full player */ }
                                         )
                                     } else {

@@ -42,6 +42,7 @@ fun UploadSongDialog(
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var isAudioSelected by remember { mutableStateOf(false) }
     var isImageSelected by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     // Format duration to display
     val formattedDuration = remember(duration) {
@@ -83,6 +84,7 @@ fun UploadSongDialog(
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                errorMessage = "Error reading audio file: ${e.message}"
             } finally {
                 retriever.release()
             }
@@ -96,6 +98,26 @@ fun UploadSongDialog(
         uri?.let {
             selectedImageUri = it
             isImageSelected = true
+        }
+    }
+
+    // Function to copy URI content to internal storage
+    fun copyUriToInternalStorage(uri: Uri, fileName: String): String? {
+        return try {
+            val inputStream = context.contentResolver.openInputStream(uri)
+            val file = File(context.filesDir, fileName)
+
+            inputStream?.use { input ->
+                file.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            file.absolutePath
+        } catch (e: Exception) {
+            e.printStackTrace()
+            errorMessage = "Error copying file: ${e.message}"
+            null
         }
     }
 
@@ -121,6 +143,17 @@ fun UploadSongDialog(
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
+
+                // Display error message if any
+                errorMessage?.let {
+                    Text(
+                        text = it,
+                        color = Color.Red,
+                        fontSize = 14.sp,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
 
                 // Upload fields container
                 Row(
@@ -317,11 +350,22 @@ fun UploadSongDialog(
                     Button(
                         onClick = {
                             selectedAudioUri?.let { audioUri ->
-                                val audioFilePath = audioUri.toString()
-                                val artworkPath = selectedImageUri?.toString() ?: ""
+                                // Generate unique filenames
+                                val audioFileName = "song_${System.currentTimeMillis()}.mp3"
+                                val artworkFileName = "artwork_${System.currentTimeMillis()}.jpg"
 
-                                onSaveClick(title, artist, audioFilePath, artworkPath, duration)
-                                onDismiss()
+                                // Copy audio file to internal storage
+                                val audioFilePath = copyUriToInternalStorage(audioUri, audioFileName)
+
+                                // Copy artwork if selected
+                                val artworkPath = selectedImageUri?.let { imgUri ->
+                                    copyUriToInternalStorage(imgUri, artworkFileName)
+                                } ?: ""
+
+                                if (audioFilePath != null) {
+                                    onSaveClick(title, artist, audioFilePath, artworkPath, duration)
+                                    onDismiss()
+                                }
                             }
                         },
                         enabled = isAudioSelected && title.isNotBlank() && artist.isNotBlank(),

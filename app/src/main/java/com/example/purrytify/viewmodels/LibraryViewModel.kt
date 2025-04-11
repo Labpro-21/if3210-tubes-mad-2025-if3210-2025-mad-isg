@@ -52,14 +52,6 @@ class LibraryViewModel(private val repository: SongRepository) : ViewModel() {
         }
     }
 
-    fun pauseSong() {
-        _isPlaying.value = false
-    }
-
-    fun resumeSong() {
-        _isPlaying.value = true
-    }
-
     fun toggleLike(song: Song) {
         viewModelScope.launch {
             repository.toggleLike(song.id, !song.isLiked)
@@ -80,5 +72,8 @@ class LibraryViewModel(private val repository: SongRepository) : ViewModel() {
             )
             repository.insert(newSong)
         }
+    }
+    fun setIsPlaying(playing: Boolean) {
+        _isPlaying.value = playing
     }
 }

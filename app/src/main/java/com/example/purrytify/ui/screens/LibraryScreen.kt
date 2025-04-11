@@ -58,7 +58,7 @@ fun LibraryScreen(
     // Ambil data dari ViewModel
     val songs by libraryViewModel.songs.collectAsState()
     val currentSong by mainViewModel.currentSong.collectAsState()
-    val isPlaying by libraryViewModel.isPlaying.collectAsState()
+    val isPlaying by mainViewModel.isPlaying.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -110,7 +110,7 @@ fun LibraryScreen(
                         onSongClick = { clickedSong ->
                             libraryViewModel.playSong(clickedSong)
                             onSongSelected(clickedSong)
-                            mainViewModel.setCurrentSong(clickedSong)
+                            mainViewModel.playSong(clickedSong)
                         }
                     )
                 }

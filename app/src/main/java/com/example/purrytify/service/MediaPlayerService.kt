@@ -57,6 +57,7 @@ class MediaPlayerService : Service() {
 
             // Handle repeat one mode
             if (repeatMode == 2) {
+                Log.d(TAG, "Repeat One mode active, replaying current song")
                 _currentSong.value?.let { song ->
                     // Replay the same song
                     playAgain()

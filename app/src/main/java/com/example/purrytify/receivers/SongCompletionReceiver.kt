@@ -7,17 +7,18 @@ import android.util.Log
 import com.example.purrytify.viewmodels.MainViewModel
 
 /**
- * Broadcast receiver to handle song completion events from the MediaPlayerService
- * This receiver is registered via LocalBroadcastManager and only receives internal app broadcasts
+ * Broadcast receiver that listens for song completion events
+ * and triggers the next song to play.
  */
 class SongCompletionReceiver(private val mainViewModel: MainViewModel) : BroadcastReceiver() {
+
     private val TAG = "SongCompletionReceiver"
 
-    override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == "com.example.purrytify.SONG_COMPLETED") {
+    override fun onReceive(context: Context?, intent: Intent?) {
+        if (intent?.action == "com.example.purrytify.SONG_COMPLETED") {
             Log.d(TAG, "Received song completion broadcast")
-            // Play the next song
-            mainViewModel.playNext()
+            // Notify the MainViewModel that the song has completed
+            mainViewModel.onSongCompleted()
         }
     }
 }

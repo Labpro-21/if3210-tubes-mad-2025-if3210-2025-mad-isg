@@ -7,8 +7,14 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +45,7 @@ import com.example.purrytify.util.EventBus
 import com.example.purrytify.util.NetworkConnectionObserver
 import com.example.purrytify.util.TokenManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.example.purrytify.viewmodels.MainViewModel
 import com.example.purrytify.viewmodels.ViewModelFactory
 import kotlinx.coroutines.Dispatchers
@@ -90,40 +97,56 @@ class MainActivity : ComponentActivity() {
                         // State to track if the full player is showing
                         var showPlayerScreen by remember { mutableStateOf(false) }
 
-                        Scaffold(
-                            bottomBar = {
-                                Column {
-                                    if (currentSong != null && !showPlayerScreen) {
-                                        MiniPlayer(
-                                            currentSong = currentSong,
-                                            isPlaying = isPlaying,
-                                            onPlayPauseClick = { mainViewModel.togglePlayPause() },
-                                            onPlayerClick = { showPlayerScreen = true }
-                                        )
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            // Main scaffold with navigation bar and mini player
+                            Scaffold(
+                                bottomBar = {
+                                    AnimatedVisibility(
+                                        visible = !showPlayerScreen,
+                                        enter = fadeIn() + slideInVertically { it },
+                                        exit = fadeOut() + slideOutVertically { it }
+                                    ) {
+                                        Column {
+                                            if (currentSong != null) {
+                                                MiniPlayer(
+                                                    currentSong = currentSong,
+                                                    isPlaying = isPlaying,
+                                                    onPlayPauseClick = { mainViewModel.togglePlayPause() },
+                                                    onPlayerClick = { showPlayerScreen = true }
+                                                )
+                                            }
+
+                                            BottomNavbar(navController = navController)
+                                        }
                                     }
-
-                                    BottomNavbar(navController = navController)
+                                },
+                                topBar = {
+                                    NoInternetConnection(isVisible = !networkStatus)
                                 }
-                            },
-                            topBar = {
-                                NoInternetConnection(isVisible = !networkStatus)
-                            }
-                        ) { paddingValues ->
-                            Box(
-                                modifier = Modifier.padding(paddingValues)
-                            ) {
-                                AppNavigation(
-                                    navController = navController,
-                                    networkConnectionObserver = networkConnectionObserver,
-                                )
-
-                                // Show the full player screen if needed
-                                if (showPlayerScreen) {
-                                    PlayerScreen(
-                                        onDismiss = { showPlayerScreen = false },
-                                        navController = navController
+                            ) { paddingValues ->
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(if (!showPlayerScreen) paddingValues else PaddingValues(0.dp))
+                                ) {
+                                    AppNavigation(
+                                        navController = navController,
+                                        networkConnectionObserver = networkConnectionObserver,
                                     )
                                 }
+                            }
+
+                            // Show the full player screen if needed
+                            AnimatedVisibility(
+                                visible = showPlayerScreen,
+                                enter = fadeIn(),
+                                exit = fadeOut()
+                            ) {
+                                PlayerScreen(
+                                    onDismiss = { showPlayerScreen = false },
+                                    navController = navController,
+                                    modifier = Modifier.fillMaxSize()
+                                )
                             }
                         }
                     } else {

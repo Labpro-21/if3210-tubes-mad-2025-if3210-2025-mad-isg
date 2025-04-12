@@ -45,6 +45,7 @@ import kotlinx.coroutines.launch
 fun PlayerScreen(
     onDismiss: () -> Unit,
     navController: NavController? = null,
+    modifier: Modifier = Modifier,
     mainViewModel: MainViewModel = viewModel(
         viewModelStoreOwner = LocalContext.current as ComponentActivity,
         factory = ViewModelFactory.getInstance(LocalContext.current)
@@ -81,7 +82,7 @@ fun PlayerScreen(
 
     if (currentSong == null) {
         Box(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
                 .background(BACKGROUND_COLOR),
             contentAlignment = Alignment.Center
@@ -96,7 +97,7 @@ fun PlayerScreen(
     }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(
                 Color(0xFF5A1E33) // Background color matching the Figma design
@@ -106,6 +107,7 @@ fun PlayerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp)
+                .systemBarsPadding() // Add system bars padding to ensure content isn't hidden
         ) {
             // Top Bar with back button and options
             Row(
@@ -128,6 +130,7 @@ fun PlayerScreen(
                 // Queue button
                 IconButton(onClick = {
                     navController?.navigate(Destinations.QUEUE_ROUTE)
+                    onDismiss() // Close player screen when navigating to queue
                 }) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_queue_music),

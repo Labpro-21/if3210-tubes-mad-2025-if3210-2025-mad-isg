@@ -227,8 +227,10 @@ fun LibraryScreen(
                         SongItem(
                             song = song.copy(isPlaying = currentSong?.id == song.id && isPlaying),
                             onSongClick = { clickedSong ->
+                                // Ganti dengan implementasi yang benar
                                 libraryViewModel.playSong(clickedSong)
                                 onSongSelected(clickedSong)
+                                // Panggil mainViewModel.playSong dengan parameter clearQueue = true
                                 mainViewModel.playSong(clickedSong)
                             },
                             onAddToQueue = { queuedSong ->

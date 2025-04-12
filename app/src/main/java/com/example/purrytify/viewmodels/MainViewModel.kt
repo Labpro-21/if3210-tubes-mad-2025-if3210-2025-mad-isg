@@ -194,36 +194,10 @@ class MainViewModel(private val songRepository: SongRepository) : ViewModel() {
         _isPlaying.value = true
 
         viewModelScope.launch {
-            // When manually playing a song, we need to check the queue state
-            val currentQueue = _queue.value
-
-            // Check if the song is already in the queue
-            val songIndex = currentQueue.indexOfFirst { it.id == song.id }
-
-            if (songIndex == 0) {
-                // Song is already at the front of queue, no need to change
-                Log.d(TAG, "Song is already at the front of queue, no change needed")
-            } else if (songIndex > 0) {
-                // Song exists elsewhere in queue, create new queue with this song at front
-                // and remaining songs (excluding this one)
-                Log.d(TAG, "Song exists in queue at position $songIndex, moving to front")
-
-                val updatedQueue = mutableListOf<Song>()
-                updatedQueue.add(song) // Add selected song to front
-
-                // Add all other songs except the selected one
-                for (i in 0 until currentQueue.size) {
-                    if (i != songIndex) {
-                        updatedQueue.add(currentQueue[i])
-                    }
-                }
-
-                _queue.value = updatedQueue
-            } else {
-                // Song is not in queue, create new queue with just this song
-                Log.d(TAG, "Song not in queue, creating new queue with just this song")
-                _queue.value = listOf(song)
-            }
+            // Ubah cara penanganan queue
+            // Buat queue baru yang hanya berisi lagu ini
+            _queue.value = listOf(song)
+            _currentQueueIndex.value = 0
 
             // Update song's last played timestamp
             Log.d(TAG, "Updating last played timestamp for song ${song.id}")

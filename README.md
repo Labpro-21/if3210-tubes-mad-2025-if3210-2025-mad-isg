@@ -59,8 +59,8 @@ Berikut adalah halaman yang tersedia dari aplikasi ini:
 | Nama | NIM | Tugas |
 |------|-----|-------|
 | Farhan Raditya Aji | 13522142 | Header dan Navbar, Login Logout, Home, Background service, Network Sensing  |
-| M. Zaidan Sa'dun Robbani | 13522146 |  |
-| Rafif Ardhinto Ichwantoro | 13522159 |  |
+| M. Zaidan Sa'dun Robbani | 13522146 | Profil, liked songs, player, informasi lagu yang ditampilkan, queue, shuffle, repeat, pencarian  |
+| Rafif Ardhinto Ichwantoro | 13522159 | library, add song, database song, mini player, queue, music player service |
 
 ---
 
@@ -69,7 +69,7 @@ Berikut adalah halaman yang tersedia dari aplikasi ini:
 | Nama | NIM | Persiapan (jam) | Pengerjaan (jam) | Total |
 |------|-----|-----------------|------------------|-------|
 | Farhan Raditya Aji | 13522142 | 8 jam | 35 jam | **43 jam** |
-| M. Zaidan Sa'dun Robbani | 13522146 |  |  |  |
-| Rafif Ardhinto Ichwantoro | 13522159 |  | |  |
+| M. Zaidan Sa'dun Robbani | 13522146 | 3 jam | 40 | **43 jam** |
+| Rafif Ardhinto Ichwantoro | 13522159 | 3 jam | 32 jam | **35 jam** |
 
 ---

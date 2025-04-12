@@ -207,50 +207,6 @@ fun EditSongDialog(
                             }
                         }
                     }
-
-                    // Upload File Box
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(100.dp)
-                            .padding(start = 8.dp)
-                            .border(
-                                border = BorderStroke(1.dp, Color.Gray),
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFF1E1E1E))
-                            .clickable { audioLauncher.launch("audio/*") },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "Change File",
-                                color = Color.White,
-                                fontSize = 12.sp
-                            )
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            if (isAudioSelected) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = "Selected",
-                                    tint = Color.Green,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            } else {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_audio_placeholder),
-                                    contentDescription = "Upload Audio",
-                                    tint = Color.Gray,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
-                    }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))

@@ -20,26 +20,28 @@ Purrytify adalah aplikasi pemutar musik berbasis Android Native (Kotlin). Aplika
 
 ### ⚙️ Android Core & Jetpack
 - Jetpack Compose (`material3`, `ui`, `navigation`, `lifecycle`)
-- RecyclerView (untuk Library)
 - Room (untuk database metadata lagu)
-- DataStore (untuk penyimpanan data preferensi)
+- ConstraintLayout (untuk layout tertentu)
+- DataStore Preferences (penyimpanan preferensi)
 - ViewModel, LiveData, StateFlow, SharedFlow
 
 ### 🌐 Networking & Auth
 - Retrofit + Gson Converter
 - OkHttp + Logging Interceptor
-- EncryptedSharedPreferences (Token Storage)
+- Security Crypto (EncryptedSharedPreferences untuk Token Storage)
+- Volley (untuk operasi networking tertentu)
 
 ### 🎵 Media & UI
-- Coil (load image cover)
+- Coil (load image cover dari berbagai sumber termasuk SVG dan video)
 - MediaMetadataRetriever (ambil info lagu)
-- ConstraintLayout (untuk layout lama)
-- Accompanist SwipeRefresh
+- Navigation Compose (navigasi antar layar)
+- Core Splashscreen (untuk splash screen)
+- Accompanist SwipeRefresh (untuk fitur refresh dengan gestur)
 
 ### ⚙️ Background & Broadcast
-- WorkManager (cek JWT token)
-- LocalBroadcastManager (notifikasi internal)
-- Coroutine (background execution)
+- Service (untuk Token Refresh Service)
+- LocalBroadcastManager (komunikasi antar komponen)
+- Coroutines (pemrosesan asinkron)
 
 ---
 

@@ -729,12 +729,14 @@ class MainViewModel(private val songRepository: SongRepository) : ViewModel() {
     fun handleSongDeleted(songId: Long) {
         Log.d(TAG, "Handling deleted song with ID: $songId")
 
-        // If the deleted song is currently playing, stop playback
+        // If the deleted song is currently playing, stop playback and clear current song
         if (_currentSong.value?.id == songId) {
             Log.d(TAG, "Currently playing song was deleted, stopping playback")
+            mediaPlayerService?.stopPlayback()
+
+            // Set current song to null (this was missing in the original implementation)
             _currentSong.value = null
             _isPlaying.value = false
-            mediaPlayerService?.stopPlayback()
         }
 
         // Remove the song from the queue if present

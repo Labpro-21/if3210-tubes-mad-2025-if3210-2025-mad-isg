@@ -780,4 +780,18 @@ class MainViewModel(private val songRepository: SongRepository) : ViewModel() {
         }
         _allSongs.value = allSongsUpdated
     }
+
+    // Handle logout
+    fun handleLogout() {
+        Log.d(TAG, "Handling logout")
+        // Clear all songs and queue
+        _allSongs.value = emptyList()
+        _queue.value = emptyList()
+        _currentQueueIndex.value = -1
+        _currentSong.value = null
+        _isPlaying.value = false
+
+        // Stop playback
+        mediaPlayerService?.stopPlayback()
+    }
 }

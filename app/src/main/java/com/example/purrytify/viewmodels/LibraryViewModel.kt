@@ -105,7 +105,8 @@ class LibraryViewModel(private val repository: SongRepository) : ViewModel() {
                         duration = duration,
                         isLiked = existingSong.isLiked,
                         lastPlayed = existingSong.lastPlayed,
-                        addedAt = existingSong.addedAt
+                        addedAt = existingSong.addedAt,
+                        userId = existingSong.userId
                     )
 
                     // Update song in repository

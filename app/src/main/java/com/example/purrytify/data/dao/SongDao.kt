@@ -21,6 +21,22 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE id = :songId")
     fun getSongByIdDirect(songId: Long): Song?
 
+    // User-specific queries
+    @Query("SELECT * FROM songs WHERE user_id = :userId ORDER BY added_at DESC")
+    fun getSongsByUserId(userId: Int): LiveData<List<Song>>
+
+    @Query("SELECT * FROM songs WHERE user_id = :userId AND is_liked = 1 ORDER BY title ASC")
+    fun getLikedSongsByUserId(userId: Int): LiveData<List<Song>>
+
+    @Query("SELECT * FROM songs WHERE user_id = :userId AND last_played IS NOT NULL ORDER BY last_played DESC LIMIT 10")
+    fun getRecentlyPlayedByUserId(userId: Int): LiveData<List<Song>>
+
+    @Query("SELECT * FROM songs WHERE id = :songId AND user_id = :userId")
+    fun getSongByIdForUser(songId: Long, userId: Int): LiveData<Song>
+
+    @Query("SELECT * FROM songs WHERE id = :songId AND user_id = :userId")
+    fun getSongByIdDirectForUser(songId: Long, userId: Int): Song?
+
     @Insert
     fun insertSong(song: Song): Long
 
@@ -37,7 +53,6 @@ interface SongDao {
     fun updateLastPlayed(songId: Long, timestamp: Long): Int
 
     // New queries for statistics
-
     @Query("SELECT COUNT(*) FROM songs")
     fun countAllSongs(): Int
 
@@ -46,4 +61,14 @@ interface SongDao {
 
     @Query("SELECT COUNT(*) FROM songs WHERE last_played IS NOT NULL")
     fun countListenedSongs(): Int
+
+    // Statistics for a specific user
+    @Query("SELECT COUNT(*) FROM songs WHERE user_id = :userId")
+    fun countAllSongsForUser(userId: Int): Int
+
+    @Query("SELECT COUNT(*) FROM songs WHERE user_id = :userId AND is_liked = 1")
+    fun countLikedSongsForUser(userId: Int): Int
+
+    @Query("SELECT COUNT(*) FROM songs WHERE user_id = :userId AND last_played IS NOT NULL")
+    fun countListenedSongsForUser(userId: Int): Int
 }

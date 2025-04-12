@@ -54,12 +54,14 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.lifecycle.ViewModelProvider
+import com.example.purrytify.data.repository.SongRepository
 
 class MainActivity : ComponentActivity() {
     private val TAG = "MainActivity"
     private lateinit var tokenManager: TokenManager
     private lateinit var networkConnectionObserver: NetworkConnectionObserver
     private lateinit var mainViewModel: MainViewModel
+    private lateinit var songRepository: SongRepository
     private val isLoggedIn = mutableStateOf(false)
     private val isNetworkAvailable = mutableStateOf(true)
     private val isInitialized = mutableStateOf(false)
@@ -89,6 +91,8 @@ class MainActivity : ComponentActivity() {
                     val networkStatus by networkConnectionObserver.isConnected.collectAsState()
 
                     if (isLoggedIn.value) {
+                        initializeUserData()
+
                         val navController = rememberNavController()
 
                         val currentSong by mainViewModel.currentSong.collectAsState()
@@ -175,6 +179,7 @@ class MainActivity : ComponentActivity() {
             // Initialize lightweight components first
             withContext(Dispatchers.Main) {
                 tokenManager = (application as PurrytifyApp).tokenManager
+                songRepository = (application as PurrytifyApp).songRepository
                 networkConnectionObserver = (application as PurrytifyApp).networkConnectionObserver
                 localBroadcastManager = LocalBroadcastManager.getInstance(this@MainActivity)
 
@@ -299,11 +304,22 @@ class MainActivity : ComponentActivity() {
     fun logout() {
         stopTokenRefreshService()
         tokenManager.deleteTokens()
+        songRepository.setCurrentUserId(-1)
+        mainViewModel.handleLogout()
+
         isLoggedIn.value = false
 
         val intent = Intent(this, MainActivity::class.java)
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
         startActivity(intent)
         finish()
+    }
+
+    private fun initializeUserData() {
+        val userId = tokenManager.getUserId()
+        if (userId > 0) {
+            Log.d(TAG, "Initializing with user ID: $userId")
+            songRepository.setCurrentUserId(userId)
+        }
     }
 }

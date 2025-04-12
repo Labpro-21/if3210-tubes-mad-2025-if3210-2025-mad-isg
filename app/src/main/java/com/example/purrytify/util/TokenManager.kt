@@ -23,7 +23,18 @@ class TokenManager(context: Context) {
         private const val KEY_JWT_TOKEN = "jwt_token"
         private const val KEY_REFRESH_TOKEN = "refresh_token"
         private const val KEY_TOKEN_EXPIRY = "token_expiry"
+        private const val KEY_USER_ID = "user_id"
         private  const val EXPIRY_TIME = 300000 // 5 minutes in milliseconds
+    }
+
+    fun saveUserId(userId: Int) {
+        sharedPreferences.edit {
+            putInt(KEY_USER_ID, userId)
+        }
+    }
+
+    fun getUserId(): Int {
+        return sharedPreferences.getInt(KEY_USER_ID, -1)
     }
 
     fun getToken(): String? {
@@ -53,6 +64,7 @@ class TokenManager(context: Context) {
             remove(KEY_JWT_TOKEN)
             remove(KEY_REFRESH_TOKEN)
             remove(KEY_TOKEN_EXPIRY)
+            remove(KEY_USER_ID)
         }
     }
 

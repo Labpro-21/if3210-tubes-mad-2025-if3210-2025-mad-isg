@@ -423,25 +423,35 @@ class MainViewModel(private val songRepository: SongRepository) : ViewModel() {
                 return@launch
             }
 
-            // Determine next index based on repeat mode
+            // Determine next index based on repeat mode and shuffle status
             val nextIndex = when (_repeatMode.value) {
                 1 -> {
-                    // Repeat All - wrap around
-                    if (currentIndex >= songs.size - 1) 0 else currentIndex + 1
+                    // Repeat All - use shuffle logic or wrap around
+                    if (_shuffleEnabled.value) {
+                        getNextShuffledSongIndex(currentIndex, songs.size)
+                    } else {
+                        if (currentIndex >= songs.size - 1) 0 else currentIndex + 1
+                    }
                 }
                 2 -> {
                     // Repeat One - stay on current song
                     currentIndex
                 }
                 else -> {
-                    // No repeat - stop at end
-                    if (currentIndex >= songs.size - 1) {
-                        // End of list - stop playback
-                        Log.d(TAG, "End of all songs reached without repeat mode, stopping playback")
-                        stopCurrentPlayback()
-                        return@launch
+                    // No repeat - use shuffle logic if enabled or stop at end
+                    if (_shuffleEnabled.value) {
+                        // For shuffle without repeat, we don't want to revisit already played songs
+                        // This requires tracking played songs, but for simplicity we'll just get a random next song
+                        getNextShuffledSongIndex(currentIndex, songs.size)
                     } else {
-                        currentIndex + 1
+                        if (currentIndex >= songs.size - 1) {
+                            // End of list - stop playback
+                            Log.d(TAG, "End of all songs reached without repeat mode, stopping playback")
+                            stopCurrentPlayback()
+                            return@launch
+                        } else {
+                            currentIndex + 1
+                        }
                     }
                 }
             }
@@ -820,6 +830,53 @@ class MainViewModel(private val songRepository: SongRepository) : ViewModel() {
         Log.d(TAG, "Setting shuffle to $enabled")
         _shuffleEnabled.value = enabled
         mediaPlayerService?.setShuffleEnabled(enabled)
+
+        // Jika shuffle diaktifkan, acak queue yang ada
+        if (enabled && _queue.value.isNotEmpty()) {
+            shuffleCurrentQueue()
+        }
+    }
+
+    private fun shuffleCurrentQueue() {
+        val currentQueue = _queue.value.toMutableList()
+
+        // Jika queue kosong atau hanya berisi 1 lagu, tidak perlu melakukan apa-apa
+        if (currentQueue.size <= 1) {
+            Log.d(TAG, "Queue too small to shuffle")
+            return
+        }
+
+        // Ambil lagu yang sedang diputar
+        val currentSong = currentQueue.removeAt(0)
+
+        // Acak lagu yang tersisa
+        val shuffledSongs = currentQueue.shuffled()
+
+        // Kembalikan lagu saat ini ke posisi awal
+        val newQueue = mutableListOf<Song>()
+        newQueue.add(currentSong)
+        newQueue.addAll(shuffledSongs)
+
+        // Perbarui queue
+        _queue.value = newQueue
+
+        Log.d(TAG, "Queue shuffled, current song remains at position 0")
+    }
+
+    private fun getNextShuffledSongIndex(currentIndex: Int, totalSongs: Int): Int {
+        // Jika shuffle tidak aktif, gunakan logika normal
+        if (!_shuffleEnabled.value) {
+            return if (currentIndex >= totalSongs - 1) 0 else currentIndex + 1
+        }
+
+        // Jika shuffle aktif, pilih indeks acak yang bukan indeks saat ini
+        var nextIndex: Int
+        do {
+            nextIndex = (0 until totalSongs).random()
+        } while (nextIndex == currentIndex && totalSongs > 1)
+
+        Log.d(TAG, "Shuffled next: $nextIndex (from currentIndex: $currentIndex)")
+        return nextIndex
     }
 
     // Toggle like status for a song

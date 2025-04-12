@@ -162,6 +162,9 @@ class MainActivity : ComponentActivity() {
                                     startTokenRefreshService()
                                 }
 
+                                // Check if the current song belongs to the new user
+                                checkCurrentSongAfterLogin()
+
                                 // Check network status after login
                                 networkConnectionObserver.checkAndUpdateConnectionStatus()
                             }
@@ -320,6 +323,28 @@ class MainActivity : ComponentActivity() {
         if (userId > 0) {
             Log.d(TAG, "Initializing with user ID: $userId")
             songRepository.setCurrentUserId(userId)
+        }
+    }
+
+    private fun checkCurrentSongAfterLogin() {
+        val currentSong = mainViewModel.currentSong.value
+
+        if (currentSong != null) {
+            lifecycleScope.launch {
+                try {
+                    val songExists = songRepository.getSongByIdDirect(currentSong.id) != null
+
+                    if (!songExists) {
+                        Log.d(TAG, "Current song does not belong to the new user, stopping playback")
+                        mainViewModel.handleLogout()
+                    } else {
+                        Log.d(TAG, "Current song belongs to the new user, continuing playback")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error checking current song after login: ${e.message}")
+                    mainViewModel.handleLogout()
+                }
+            }
         }
     }
 }

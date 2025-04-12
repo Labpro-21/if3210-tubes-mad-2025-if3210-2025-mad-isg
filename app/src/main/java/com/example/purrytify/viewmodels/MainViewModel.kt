@@ -357,108 +357,56 @@ class MainViewModel(private val songRepository: SongRepository) : ViewModel() {
         val queue = _queue.value
         val currentSong = _currentSong.value
 
-        Log.d(TAG, "DEBUG_QUEUE: playNextFromQueue called, queue size: ${queue.size}")
-
         if (queue.isEmpty()) {
-            Log.d(TAG, "DEBUG_QUEUE: Queue is empty, cannot play next")
+            Log.d(TAG, "Queue is empty, cannot play next")
             return
         }
 
-        // Jika hanya ada satu lagu di queue (lagu terakhir/currently playing)
-        if (queue.size == 1) {
-            Log.d(TAG, "DEBUG_QUEUE: Only one song in queue (currently playing)")
+        // Jika queue memiliki lebih dari 1 lagu
+        if (queue.size > 1) {
+            // Ada lagu berikutnya, jadi lanjutkan normal
+            val nextSong = queue[1]
 
-            // Cari lagu berikutnya dari koleksi semua lagu
-            viewModelScope.launch {
-                // Pastikan semua lagu sudah dimuat
-                if (_allSongs.value.isEmpty()) {
-                    loadAllSongs()
-                }
-
-                val songs = _allSongs.value
-                if (songs.isEmpty()) {
-                    Log.d(TAG, "DEBUG_QUEUE: No songs available")
-                    return@launch
-                }
-
-                // Cari indeks lagu saat ini
-                val currentIndex = currentSong?.let { song ->
-                    songs.indexOfFirst { it.id == song.id }
-                } ?: -1
-
-                if (currentIndex == -1) {
-                    Log.d(TAG, "DEBUG_QUEUE: Current song not found in all songs")
-                    return@launch
-                }
-
-                // Tentukan indeks lagu berikutnya
-                val nextIndex = when (_repeatMode.value) {
-                    1 -> { // Repeat All
-                        if (currentIndex >= songs.size - 1) 0 else currentIndex + 1
-                    }
-                    2 -> { // Repeat One
-                        currentIndex
-                    }
-                    else -> { // No Repeat
-                        if (currentIndex >= songs.size - 1) {
-                            // End of list, stop playback
-                            stopCurrentPlayback()
-                            return@launch
-                        } else {
-                            currentIndex + 1
-                        }
-                    }
-                }
-
-                // Ambil lagu berikutnya
-                val nextSong = songs.getOrNull(nextIndex)
-                if (nextSong != null) {
-                    Log.d(TAG, "DEBUG_QUEUE: Found next song from all songs: ${nextSong.title}")
-
-                    // Tambahkan lagu saat ini ke history
-                    currentSong?.let { song ->
-                        val updatedHistory = _playHistory.value.toMutableList()
-                        updatedHistory.add(song)
-                        _playHistory.value = updatedHistory
-                    }
-
-                    // PENTING: Tetap pertahankan queue dengan lagu saat ini
-                    // sampai lagu selesai diputar
-                    // Hanya update lagu yang sedang diputar
-                    _currentSong.value = nextSong
-                    _isPlaying.value = true
-                    mediaPlayerService?.playSong(nextSong)
-                }
+            // Tambahkan lagu saat ini ke history jika ada
+            currentSong?.let { song ->
+                val updatedHistory = _playHistory.value.toMutableList()
+                updatedHistory.add(song)
+                _playHistory.value = updatedHistory
+                Log.d(TAG, "Added current song to history, history size: ${updatedHistory.size}")
             }
-            return
+
+            // Buat queue baru tanpa lagu saat ini
+            val newQueue = queue.toMutableList()
+            newQueue.removeAt(0) // Hapus lagu saat ini
+
+            // Set queue baru
+            _queue.value = newQueue
+
+            // Log operasi
+            Log.d(TAG, "Playing next song from queue: ${nextSong.title}, new queue size: ${newQueue.size}")
+
+            // Set current song without automatically updating queue again
+            _currentSong.value = nextSong
+            _isPlaying.value = true
+
+            // Play using the media player service
+            mediaPlayerService?.playSong(nextSong)
+        } else {
+            // Queue hanya berisi 1 lagu (lagu terakhir), dan tombol next ditekan
+            Log.d(TAG, "Last song in queue and next pressed, switching to all songs navigation")
+
+            // Tambahkan lagu saat ini ke history
+            currentSong?.let { song ->
+                val updatedHistory = _playHistory.value.toMutableList()
+                updatedHistory.add(song)
+                _playHistory.value = updatedHistory
+                Log.d(TAG, "Added current song to history, history size: ${updatedHistory.size}")
+            }
+
+            // Clear queue dan beralih ke navigasi semua lagu
+            _queue.value = emptyList()
+            playNextFromAllSongs()
         }
-
-        // Jika ada lebih dari satu lagu dalam queue
-        // Ambil lagu berikutnya (posisi 1)
-        val nextSong = queue[1]
-
-        // Tambahkan lagu saat ini ke history
-        currentSong?.let { song ->
-            val updatedHistory = _playHistory.value.toMutableList()
-            updatedHistory.add(song)
-            _playHistory.value = updatedHistory
-        }
-
-        // Buat queue baru tanpa lagu saat ini
-        val newQueue = queue.toMutableList()
-        newQueue.removeAt(0) // Hapus lagu saat ini
-
-        Log.d(TAG, "DEBUG_QUEUE: New queue size after removing current song: ${newQueue.size}")
-
-        // Set queue baru
-        _queue.value = newQueue
-
-        // Set current song
-        _currentSong.value = nextSong
-        _isPlaying.value = true
-
-        // Play using the media player service
-        mediaPlayerService?.playSong(nextSong)
     }
     // Play next song from all songs if no queue is active
     private fun playNextFromAllSongs() {
@@ -677,6 +625,7 @@ class MainViewModel(private val songRepository: SongRepository) : ViewModel() {
         _isPlaying.value = true
         mediaPlayerService?.playSong(previousSong)
     }
+
 
     // Play previous song from all songs if no queue is active
     private fun playPreviousFromAllSongs() {
@@ -934,87 +883,91 @@ class MainViewModel(private val songRepository: SongRepository) : ViewModel() {
 
     // Handle song completion (called from song completion receiver)
     fun onSongCompleted(isEndOfPlayback: Boolean = false, completedSongId: String? = null) {
-        Log.d(TAG, "DEBUG_QUEUE: onSongCompleted called, isEndOfPlayback: $isEndOfPlayback")
-        Log.d(TAG, "DEBUG_QUEUE: Current queue size: ${_queue.value.size}")
+        Log.d(TAG, "Song completed, isEndOfPlayback: $isEndOfPlayback")
 
         val currentSong = _currentSong.value
         val queue = _queue.value
 
-        // Jika queue masih memiliki lebih dari 1 lagu
+        // First check if there are songs in the queue
         if (queue.size > 1) {
-            Log.d(TAG, "DEBUG_QUEUE: Queue has ${queue.size} songs, playing next song")
+            // Queue memiliki lebih dari 1 lagu, putar lagu berikutnya
 
-            // Tambahkan lagu saat ini ke history
+            // Before moving to next song, add current song to history
             currentSong?.let { song ->
                 val updatedHistory = _playHistory.value.toMutableList()
                 updatedHistory.add(song)
                 _playHistory.value = updatedHistory
-                Log.d(TAG, "DEBUG_QUEUE: Added song to history, history size: ${updatedHistory.size}")
+                Log.d(TAG, "Added completed song to history, history size: ${updatedHistory.size}")
             }
 
-            // Play next song in queue
+            // More songs in queue, play the next song
+            Log.d(TAG, "More songs in queue, playing next song")
             playNextFromQueue()
             return
-        }
-        // Jika queue hanya berisi 1 lagu dan lagu tersebut telah selesai diputar
-        else if (queue.size == 1 && isEndOfPlayback) {
-            Log.d(TAG, "DEBUG_QUEUE: Last song in queue finished playing")
+        } else if (queue.size == 1 && isEndOfPlayback) {
+            // Ini adalah lagu terakhir dalam queue dan baru saja selesai diputar
 
-            // Tambahkan lagu ke history
+            // Add it to history
             currentSong?.let { song ->
                 val updatedHistory = _playHistory.value.toMutableList()
                 updatedHistory.add(song)
                 _playHistory.value = updatedHistory
-                Log.d(TAG, "DEBUG_QUEUE: Added last song to history, history size: ${updatedHistory.size}")
+                Log.d(TAG, "Added last queue song to history, history size: ${updatedHistory.size}")
             }
 
-            // PENTING: Hanya hapus queue jika lagu terakhir benar-benar telah selesai
-            Log.d(TAG, "DEBUG_QUEUE: Clearing queue after last song finished")
+            // Clear the queue since the last song has completed
             _queue.value = emptyList()
+            Log.d(TAG, "Last song in queue completed, queue cleared")
 
-            // Tentukan tindakan berikutnya berdasarkan mode repeat
+            // Now decide what to do based on repeat mode
             if (_repeatMode.value == 1) {
-                // Repeat All - lanjut ke navigasi semua lagu
-                Log.d(TAG, "DEBUG_QUEUE: Repeat All mode, playing next song")
+                // Repeat All mode - use standard navigation
+                Log.d(TAG, "Repeat All mode, playing next song from all songs")
                 playNextFromAllSongs()
+                return
             } else if (_repeatMode.value == 2) {
-                // Repeat One - ditangani oleh MediaPlayerService
-                Log.d(TAG, "DEBUG_QUEUE: Repeat One mode, handled by service")
+                // Repeat One mode - should be handled by MediaPlayerService already
+                Log.d(TAG, "Repeat One mode, handled by MediaPlayerService")
+                return
             } else {
-                // No repeat - stop playback
-                Log.d(TAG, "DEBUG_QUEUE: No repeat mode, stopping playback")
+                // No repeat mode (0) - we're at the end of queue
+                // Just stop playback
+                Log.d(TAG, "Last song in queue completed, no repeat mode, stopping playback")
                 _isPlaying.value = false
                 mediaPlayerService?.resetEndOfPlaybackFlag()
+                return
             }
-            return
         }
-        // Queue kosong atau kasus lain
-        else {
-            Log.d(TAG, "DEBUG_QUEUE: Queue empty or other case, handling based on repeat mode")
 
-            // Check repeat modes
-            when (_repeatMode.value) {
-                1 -> {
-                    // Repeat All mode - use standard navigation
-                    Log.d(TAG, "DEBUG_QUEUE: Repeat All mode, playing next song")
+        // Fallback - no songs in queue
+        Log.d(TAG, "No songs in queue, using all songs navigation")
+        // Check repeat modes
+        when (_repeatMode.value) {
+            1 -> {
+                // Repeat All mode - use standard navigation
+                Log.d(TAG, "Repeat All mode, playing next song")
+                playNextFromAllSongs()
+            }
+            2 -> {
+                // Repeat One mode - should be handled by MediaPlayerService already
+                Log.d(TAG, "Repeat One mode, should be handled by MediaPlayerService")
+            }
+            else -> {
+                // No repeat (0)
+                if (isEndOfPlayback) {
+                    // We're at the end of the queue/playlist and not in repeat mode
+                    // Just stop - don't proceed to the next song
+                    Log.d(TAG, "End of playlist reached without repeat mode, stopping playback")
+
+                    // Update UI state to indicate playback has ended
+                    _isPlaying.value = false
+
+                    // Reset the service's end of playback flag if needed
+                    mediaPlayerService?.resetEndOfPlaybackFlag()
+                } else {
+                    // We're not at the end yet, try to play the next song from all songs
+                    Log.d(TAG, "Playing next song (not at end of playlist)")
                     playNextFromAllSongs()
-                }
-                2 -> {
-                    // Repeat One mode - should be handled by MediaPlayerService already
-                    Log.d(TAG, "DEBUG_QUEUE: Repeat One mode, handled by service")
-                }
-                else -> {
-                    // No repeat (0)
-                    if (isEndOfPlayback) {
-                        // We're at the end of the queue/playlist and not in repeat mode
-                        Log.d(TAG, "DEBUG_QUEUE: End of playlist reached without repeat, stopping")
-                        _isPlaying.value = false
-                        mediaPlayerService?.resetEndOfPlaybackFlag()
-                    } else {
-                        // We're not at the end yet, try to play the next song from all songs
-                        Log.d(TAG, "DEBUG_QUEUE: Not end of playlist, playing next song")
-                        playNextFromAllSongs()
-                    }
                 }
             }
         }

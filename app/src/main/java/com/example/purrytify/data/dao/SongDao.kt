@@ -18,6 +18,9 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE id = :songId")
     fun getSongById(songId: Long): LiveData<Song>
 
+    @Query("SELECT * FROM songs WHERE id = :songId")
+    fun getSongByIdDirect(songId: Long): Song?
+
     @Insert
     fun insertSong(song: Song): Long
 

@@ -232,7 +232,7 @@ class MainViewModel(private val songRepository: SongRepository) : ViewModel() {
     }
 
     // Set current song
-    fun setCurrentSong(song: Song) {
+    private fun setCurrentSong(song: Song) {
         Log.d(TAG, "Setting current song: ${song.title}")
         _currentSong.value = song
         _isPlaying.value = true
@@ -525,7 +525,7 @@ class MainViewModel(private val songRepository: SongRepository) : ViewModel() {
                 Log.d(TAG, "No repeat mode and reached end, keeping current index")
                 // Send a signal that we've reached the end
                 mediaPlayerService?.let {
-                    if (!it.reachedEndOfPlayback.value) {
+                        if (!it.reachedEndOfPlayback.value) {
                         // The MediaPlayerService handles playback end, but we set the flag here too
                         // in case this method is called outside of song completion event
                     }
@@ -598,7 +598,7 @@ class MainViewModel(private val songRepository: SongRepository) : ViewModel() {
 
             // Update current index if needed
             if (_currentQueueIndex.value >= index && _queue.value.isNotEmpty()) {
-                _currentQueueIndex.value = _currentQueueIndex.value - 1
+                _currentQueueIndex.value -= 1
                 if (_currentQueueIndex.value < 0) _currentQueueIndex.value = 0
             }
         }
@@ -714,14 +714,68 @@ class MainViewModel(private val songRepository: SongRepository) : ViewModel() {
         // Update current index if necessary
         if (_currentQueueIndex.value == fromIndex) {
             _currentQueueIndex.value = toIndex
-        } else if (fromIndex < _currentQueueIndex.value && _currentQueueIndex.value <= toIndex) {
+        } else if (_currentQueueIndex.value in (fromIndex + 1)..toIndex) {
             // Item moved from before current to after current
-            _currentQueueIndex.value = _currentQueueIndex.value - 1
-        } else if (toIndex <= _currentQueueIndex.value && _currentQueueIndex.value < fromIndex) {
+            _currentQueueIndex.value -= 1
+        } else if (_currentQueueIndex.value in toIndex..<fromIndex) {
             // Item moved from after current to before current
-            _currentQueueIndex.value = _currentQueueIndex.value + 1
+            _currentQueueIndex.value += 1
         }
 
         Log.d(TAG, "Moved song in queue from $fromIndex to $toIndex, new queue size: ${currentQueue.size}")
+    }
+
+    // Handle song deletion
+    fun handleSongDeleted(songId: Long) {
+        Log.d(TAG, "Handling deleted song with ID: $songId")
+
+        // If the deleted song is currently playing, stop playback
+        if (_currentSong.value?.id == songId) {
+            Log.d(TAG, "Currently playing song was deleted, stopping playback")
+            _currentSong.value = null
+            _isPlaying.value = false
+            mediaPlayerService?.stopPlayback()
+        }
+
+        // Remove the song from the queue if present
+        val currentQueue = _queue.value.toMutableList()
+        val wasInQueue = currentQueue.removeIf { it.id == songId }
+
+        if (wasInQueue) {
+            Log.d(TAG, "Removed deleted song from queue")
+            _queue.value = currentQueue
+
+            // Adjust current queue index if necessary
+            if (_currentQueueIndex.value >= currentQueue.size && _currentQueueIndex.value > 0) {
+                _currentQueueIndex.value = currentQueue.size - 1
+            }
+        }
+    }
+
+    // Handle song update
+    fun handleSongUpdated(updatedSong: Song) {
+        Log.d(TAG, "Handling updated song with ID: ${updatedSong.id}")
+
+        // If the updated song is currently playing, update the current song
+        if (_currentSong.value?.id == updatedSong.id) {
+            Log.d(TAG, "Updating currently playing song")
+            _currentSong.value = updatedSong.copy(isPlaying = _isPlaying.value)
+        }
+
+        // Update the song in the queue if present
+        val currentQueue = _queue.value.toMutableList()
+        val queueIndex = currentQueue.indexOfFirst { it.id == updatedSong.id }
+
+        if (queueIndex != -1) {
+            Log.d(TAG, "Updating song in queue at position $queueIndex")
+            currentQueue[queueIndex] = updatedSong
+            _queue.value = currentQueue
+        }
+
+        // Update in all songs list if present
+        val allSongsUpdated = _allSongs.value.map { song ->
+            if (song.id == updatedSong.id) updatedSong else song
+        }
+        _allSongs.value = allSongsUpdated
     }
 }

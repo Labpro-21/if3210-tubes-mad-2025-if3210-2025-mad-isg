@@ -40,11 +40,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.purrytify.models.Song
+import com.example.purrytify.ui.components.DeleteSongDialog
+import com.example.purrytify.ui.components.EditSongDialog
 import com.example.purrytify.ui.components.LibraryTabs
 import com.example.purrytify.ui.components.SongItem
 import com.example.purrytify.ui.components.UploadSongDialog
 import com.example.purrytify.viewmodels.LibraryViewModel
 import com.example.purrytify.viewmodels.MainViewModel
+import com.example.purrytify.viewmodels.OperationStatus
 import com.example.purrytify.viewmodels.ViewModelFactory
 import kotlinx.coroutines.launch
 
@@ -62,6 +65,10 @@ fun LibraryScreen(
     // State for tab that is selected
     var selectedTab by remember { mutableStateOf("All") }
     var showUploadDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var selectedSongForEdit by remember { mutableStateOf<Song?>(null) }
+    var selectedSongForDelete by remember { mutableStateOf<Song?>(null) }
 
     // Search state
     var searchQuery by remember { mutableStateOf("") }
@@ -75,6 +82,25 @@ fun LibraryScreen(
     val songs by libraryViewModel.songs.collectAsState()
     val currentSong by mainViewModel.currentSong.collectAsState()
     val isPlaying by mainViewModel.isPlaying.collectAsState()
+    val operationStatus by libraryViewModel.operationStatus.collectAsState()
+
+    // Handle operation status
+    operationStatus?.let { status ->
+        when (status) {
+            is OperationStatus.Success -> {
+                scope.launch {
+                    snackbarHostState.showSnackbar(status.message)
+                    libraryViewModel.clearOperationStatus()
+                }
+            }
+            is OperationStatus.Error -> {
+                scope.launch {
+                    snackbarHostState.showSnackbar(status.message)
+                    libraryViewModel.clearOperationStatus()
+                }
+            }
+        }
+    }
 
     // Filter songs based on search query
     val filteredSongs = remember(songs, searchQuery, selectedTab) {
@@ -213,6 +239,14 @@ fun LibraryScreen(
                             },
                             onToggleLike = { likedSong, isLiked ->
                                 mainViewModel.toggleLike(likedSong.id, isLiked)
+                            },
+                            onEditSong = { songToEdit ->
+                                selectedSongForEdit = songToEdit
+                                showEditDialog = true
+                            },
+                            onDeleteSong = { songToDelete ->
+                                selectedSongForDelete = songToDelete
+                                showDeleteDialog = true
                             }
                         )
                     }
@@ -235,6 +269,38 @@ fun LibraryScreen(
                         snackbarHostState.showSnackbar("Song added: $title")
                     }
                     showUploadDialog = false
+                }
+            )
+        }
+
+        // Edit Song Dialog
+        if (showEditDialog && selectedSongForEdit != null) {
+            EditSongDialog(
+                song = selectedSongForEdit!!,
+                onDismiss = { showEditDialog = false },
+                onSaveClick = { title, artist, filePath, artworkPath, duration ->
+                    libraryViewModel.editSong(
+                        selectedSongForEdit!!.id,
+                        title,
+                        artist,
+                        filePath,
+                        artworkPath,
+                        duration,
+                        mainViewModel
+                    )
+                    showEditDialog = false
+                }
+            )
+        }
+
+        // Delete Song Dialog
+        if (showDeleteDialog && selectedSongForDelete != null) {
+            DeleteSongDialog(
+                song = selectedSongForDelete!!,
+                onDismiss = { showDeleteDialog = false },
+                onConfirmDelete = { songToDelete ->
+                    libraryViewModel.deleteSong(songToDelete.id, mainViewModel)
+                    showDeleteDialog = false
                 }
             )
         }

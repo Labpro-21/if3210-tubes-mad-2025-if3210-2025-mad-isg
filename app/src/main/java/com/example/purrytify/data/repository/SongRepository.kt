@@ -48,7 +48,12 @@ class SongRepository(private val songDao: SongDao) {
         return songDao.getSongById(songId)
     }
 
-    // New methods for statistics
+    // New direct method to get a song synchronously
+    suspend fun getSongByIdDirect(songId: Long): Song? {
+        return withContext(Dispatchers.IO) {
+            songDao.getSongByIdDirect(songId)
+        }
+    }
 
     // Count all songs
     fun getAllSongsCount(): Flow<Int> = flow {

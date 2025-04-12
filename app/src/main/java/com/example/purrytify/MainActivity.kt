@@ -93,7 +93,7 @@ class MainActivity : ComponentActivity() {
                         Scaffold(
                             bottomBar = {
                                 Column {
-                                    if (currentSong != null) {
+                                    if (currentSong != null && !showPlayerScreen) {
                                         MiniPlayer(
                                             currentSong = currentSong,
                                             isPlaying = isPlaying,

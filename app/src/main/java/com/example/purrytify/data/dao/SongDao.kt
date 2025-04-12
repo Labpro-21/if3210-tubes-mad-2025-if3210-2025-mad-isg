@@ -32,4 +32,15 @@ interface SongDao {
 
     @Query("UPDATE songs SET last_played = :timestamp WHERE id = :songId")
     fun updateLastPlayed(songId: Long, timestamp: Long): Int
+
+    // New queries for statistics
+
+    @Query("SELECT COUNT(*) FROM songs")
+    fun countAllSongs(): Int
+
+    @Query("SELECT COUNT(*) FROM songs WHERE is_liked = 1")
+    fun countLikedSongs(): Int
+
+    @Query("SELECT COUNT(*) FROM songs WHERE last_played IS NOT NULL")
+    fun countListenedSongs(): Int
 }

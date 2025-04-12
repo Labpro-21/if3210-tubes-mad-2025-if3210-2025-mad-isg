@@ -128,4 +128,5 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
     implementation("androidx.lifecycle:lifecycle-process:2.7.0")
     implementation ("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
+    implementation ("com.google.accompanist:accompanist-swiperefresh:0.25.1")
 }

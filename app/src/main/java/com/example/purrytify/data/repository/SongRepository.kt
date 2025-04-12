@@ -4,6 +4,9 @@ import androidx.lifecycle.LiveData
 import com.example.purrytify.data.dao.SongDao
 import com.example.purrytify.data.entity.Song
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 
 class SongRepository(private val songDao: SongDao) {
@@ -44,4 +47,30 @@ class SongRepository(private val songDao: SongDao) {
     fun getSongById(songId: Long): LiveData<Song> {
         return songDao.getSongById(songId)
     }
+
+    // New methods for statistics
+
+    // Count all songs
+    fun getAllSongsCount(): Flow<Int> = flow {
+        val count = withContext(Dispatchers.IO) {
+            songDao.countAllSongs()
+        }
+        emit(count)
+    }.flowOn(Dispatchers.IO)
+
+    // Count liked songs
+    fun getLikedSongsCount(): Flow<Int> = flow {
+        val count = withContext(Dispatchers.IO) {
+            songDao.countLikedSongs()
+        }
+        emit(count)
+    }.flowOn(Dispatchers.IO)
+
+    // Count songs that have been played
+    fun getListenedSongsCount(): Flow<Int> = flow {
+        val count = withContext(Dispatchers.IO) {
+            songDao.countListenedSongs()
+        }
+        emit(count)
+    }.flowOn(Dispatchers.IO)
 }

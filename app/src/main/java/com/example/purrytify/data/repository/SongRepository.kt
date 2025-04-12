@@ -92,6 +92,14 @@ class SongRepository(private val songDao: SongDao) {
         }
     }
 
+    fun getNewestSongs(): LiveData<List<Song>> {
+        return if (currentUserId > 0) {
+            songDao.getNewestSongsByUserId(currentUserId)
+        } else {
+            songDao.getNewestSongs()
+        }
+    }
+
     // Get a song by ID directly (synchronously)
     suspend fun getSongByIdDirect(songId: Long): Song? {
         return withContext(Dispatchers.IO) {

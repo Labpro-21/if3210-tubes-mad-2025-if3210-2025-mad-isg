@@ -90,7 +90,7 @@ fun NewSongItem(
                 )
             } else {
                 // Fallback
-                painterResource(id = R.drawable.logo_aplikasi)
+                painterResource(id = R.drawable.ic_image_placeholder)
             }
 
             Image(

@@ -21,6 +21,9 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE id = :songId")
     fun getSongByIdDirect(songId: Long): Song?
 
+    @Query("SELECT * FROM songs ORDER BY added_at DESC LIMIT 5")
+    fun getNewestSongs(): LiveData<List<Song>>
+
     // User-specific queries
     @Query("SELECT * FROM songs WHERE user_id = :userId ORDER BY added_at DESC")
     fun getSongsByUserId(userId: Int): LiveData<List<Song>>
@@ -36,6 +39,9 @@ interface SongDao {
 
     @Query("SELECT * FROM songs WHERE id = :songId AND user_id = :userId")
     fun getSongByIdDirectForUser(songId: Long, userId: Int): Song?
+
+    @Query("SELECT * FROM songs WHERE user_id = :userId ORDER BY added_at DESC LIMIT 5")
+    fun getNewestSongsByUserId(userId: Int): LiveData<List<Song>>
 
     @Insert
     fun insertSong(song: Song): Long

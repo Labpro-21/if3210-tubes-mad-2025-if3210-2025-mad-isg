@@ -56,7 +56,7 @@ fun HomeScreen() {
     )
 
     // Observe data dari ViewModels
-    val allSongs by homeViewModel.allSongs.observeAsState(emptyList())
+    val newSongs by homeViewModel.newSongs.observeAsState(emptyList())
     val recentlyPlayed by homeViewModel.recentlyPlayed.observeAsState(emptyList())
     val currentSong by mainViewModel.currentSong.collectAsState()
     val isPlaying by mainViewModel.isPlaying.collectAsState()
@@ -93,7 +93,7 @@ fun HomeScreen() {
             // Horizontal scrollable songs
             item {
                 NewSongs(
-                    songs = allSongs,
+                    songs = newSongs,
                     onSongClick = { song ->
                         playSong(song, homeViewModel, mainViewModel)
                     },

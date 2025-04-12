@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class HomeViewModel(private val songRepository: SongRepository) : ViewModel() {
+    private val TAG = "HomeViewModel"
 
     // ID lagu yang sedang diputar
     private val _playingSongId = MutableStateFlow<Long>(-1)
@@ -31,15 +32,24 @@ class HomeViewModel(private val songRepository: SongRepository) : ViewModel() {
     private val _recentlyPlayed = MutableLiveData<List<Song>>(emptyList())
     val recentlyPlayed: LiveData<List<Song>> = _recentlyPlayed
 
+    // New songs (5 terbaru)
+    private val _newSongs = MutableLiveData<List<Song>>(emptyList())
+    val newSongs: LiveData<List<Song>> = _newSongs
+
     // Store observers so we can clean them up
     private val allSongsObserver = Observer<List<EntitySong>> { entityList ->
-        Log.d("HomeViewModel", "All songs updated, count: ${entityList.size}")
+        Log.d(TAG, "All songs updated, count: ${entityList.size}")
         _allSongs.value = convertToModelSongs(entityList)
     }
 
     private val recentlyPlayedObserver = Observer<List<EntitySong>> { entityList ->
-        Log.d("HomeViewModel", "Recently played updated, count: ${entityList.size}")
+        Log.d(TAG, "Recently played updated, count: ${entityList.size}")
         _recentlyPlayed.value = convertToModelSongs(entityList)
+    }
+
+    private val newSongsObserver = Observer<List<EntitySong>> { entityList ->
+        Log.d(TAG, "New songs updated, count: ${entityList.size}")
+        _newSongs.value = convertToModelSongs(entityList)
     }
 
     init {
@@ -53,6 +63,9 @@ class HomeViewModel(private val songRepository: SongRepository) : ViewModel() {
 
         // Observe recentlyPlayed from repository
         songRepository.recentlyPlayed.observeForever(recentlyPlayedObserver)
+
+        // Observe new songs
+        songRepository.getNewestSongs().observeForever(newSongsObserver)
     }
 
     private fun convertToModelSongs(entityList: List<EntitySong>): List<Song> {
@@ -66,7 +79,7 @@ class HomeViewModel(private val songRepository: SongRepository) : ViewModel() {
      * @param song Lagu yang akan diputar
      */
     fun playSong(song: Song) {
-        Log.d("HomeViewModel", "Playing song: ${song.title}")
+        Log.d(TAG, "Playing song: ${song.title}")
         _playingSongId.value = song.id
         _isPlaying.value = true
 
@@ -78,7 +91,7 @@ class HomeViewModel(private val songRepository: SongRepository) : ViewModel() {
                 // Update UI dengan status playing yang baru
                 updateSongPlayingStatus()
             } catch (e: Exception) {
-                Log.e("HomeViewModel", "Error updating last played timestamp", e)
+                Log.e(TAG, "Error updating last played timestamp", e)
             }
         }
     }
@@ -96,6 +109,11 @@ class HomeViewModel(private val songRepository: SongRepository) : ViewModel() {
 
         // Update recentlyPlayed
         _recentlyPlayed.value = _recentlyPlayed.value?.map { song ->
+            song.copy(isPlaying = song.id == currentPlayingSongId)
+        }
+
+        // Update newSongs
+        _newSongs.value = _newSongs.value?.map { song ->
             song.copy(isPlaying = song.id == currentPlayingSongId)
         }
     }
@@ -117,7 +135,7 @@ class HomeViewModel(private val songRepository: SongRepository) : ViewModel() {
             try {
                 songRepository.toggleLike(songId, isLiked)
             } catch (e: Exception) {
-                Log.e("HomeViewModel", "Error toggling like status", e)
+                Log.e(TAG, "Error toggling like status", e)
             }
         }
     }
@@ -127,5 +145,10 @@ class HomeViewModel(private val songRepository: SongRepository) : ViewModel() {
         // Properly remove observers to prevent memory leaks
         songRepository.allSongs.removeObserver(allSongsObserver)
         songRepository.recentlyPlayed.removeObserver(recentlyPlayedObserver)
+        try {
+            songRepository.getNewestSongs().removeObserver(newSongsObserver)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error removing new songs observer", e)
+        }
     }
 }

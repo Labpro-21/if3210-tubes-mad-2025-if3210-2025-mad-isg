@@ -20,9 +20,9 @@ class SongCompletionReceiver(private val mainViewModel: MainViewModel) : Broadca
 
             // Check if this is the end of the playlist without repeat mode
             val isEndOfPlayback = intent.getBooleanExtra("END_OF_PLAYBACK", false)
-
+            val completedSongId = intent.getStringExtra("COMPLETED_SONG_ID")
             // Notify the MainViewModel that the song has completed
-            mainViewModel.onSongCompleted(isEndOfPlayback)
+            mainViewModel.onSongCompleted(isEndOfPlayback, completedSongId)
         }
     }
 }

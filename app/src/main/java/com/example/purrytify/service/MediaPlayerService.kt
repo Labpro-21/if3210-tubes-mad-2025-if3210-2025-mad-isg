@@ -32,6 +32,9 @@ class MediaPlayerService : Service() {
     private val _reachedEndOfPlayback = MutableStateFlow(false)
     val reachedEndOfPlayback: StateFlow<Boolean> = _reachedEndOfPlayback
 
+    // Track which song is being played to prevent duplicate song infinite loop
+    private val _currentPlayingId = MutableStateFlow<Long?>(null)
+
     // Bonus features state
     private var shuffleEnabled = false
     private var repeatMode = 0 // 0: off, 1: repeat all, 2: repeat one
@@ -55,6 +58,9 @@ class MediaPlayerService : Service() {
         localBroadcastManager = LocalBroadcastManager.getInstance(this)
 
         // Set up completion listener
+        // In MediaPlayerService.kt, update the media player completion listener
+
+// Set up completion listener
         mediaPlayer.setOnCompletionListener {
             Log.d(TAG, "Song completed playback")
             _isPlaying.value = false
@@ -66,19 +72,22 @@ class MediaPlayerService : Service() {
                     // Replay the same song
                     playAgain()
                 }
-            } else if (repeatMode == 1) {
-                // In Repeat All mode, send broadcast to proceed to next song
-                Log.d(TAG, "Repeat All mode active, proceeding to next song")
-                val intent = Intent("com.example.purrytify.SONG_COMPLETED")
-                localBroadcastManager.sendBroadcast(intent)
             } else {
-                // In no-repeat mode (0), check if we're at the end
-                Log.d(TAG, "No repeat mode, checking if we need to stop")
-                // We'll set a flag that can be checked by the ViewModel
-                _reachedEndOfPlayback.value = true
-                // Still send the completion broadcast to let ViewModel handle the situation
+                // For both Repeat All and No Repeat modes, let the ViewModel handle the next song logic
+                // Send broadcast to notify of song completion
                 val intent = Intent("com.example.purrytify.SONG_COMPLETED")
-                intent.putExtra("END_OF_PLAYBACK", true)
+
+                // In normal mode (not repeat all), we need to check if we're at the end
+                if (repeatMode == 0) {
+                    // Check if we're at the end of all songs or queue
+                    _reachedEndOfPlayback.value = true
+                    intent.putExtra("END_OF_PLAYBACK", true)
+                }
+
+                // Add the current song ID to avoid infinite loops
+                intent.putExtra("COMPLETED_SONG_ID", _currentPlayingId.value)
+
+                // Send the broadcast to the ViewModel
                 localBroadcastManager.sendBroadcast(intent)
             }
         }
@@ -98,6 +107,9 @@ class MediaPlayerService : Service() {
 
             // Reset media player if currently playing another song
             mediaPlayer.reset()
+
+            // Save the current song ID to track playback and prevent infinite loops
+            _currentPlayingId.value = song.id
 
             // Check if path is content URI or local file path
             if (song.filePath.startsWith("content://")) {
@@ -237,5 +249,4 @@ class MediaPlayerService : Service() {
         mediaPlayer.release()
         super.onDestroy()
     }
-
 }

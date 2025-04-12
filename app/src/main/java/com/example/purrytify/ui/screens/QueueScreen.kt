@@ -79,15 +79,18 @@ fun QueueScreen(
         }
     }
 
-    // Scrolling state for the list
-    val listState = rememberLazyListState()
-
-    // Scroll to current song
-    LaunchedEffect(currentQueueIndex.value) {
-        if (currentQueueIndex.value > 0) {
-            listState.animateScrollToItem(currentQueueIndex.value)
+    // Calculate upcoming songs (only songs that haven't been played yet)
+    val upcomingSongs = remember(queue, currentQueueIndex.value) {
+        if (currentQueueIndex.value >= 0 && currentQueueIndex.value < queue.size) {
+            // Get only songs after the current playing song
+            queue.subList(currentQueueIndex.value + 1, queue.size)
+        } else {
+            queue
         }
     }
+
+    // Scrolling state for the list
+    val listState = rememberLazyListState()
 
     // Handle feedback display
     LaunchedEffect(showFeedback) {
@@ -179,8 +182,8 @@ fun QueueScreen(
                 modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
             )
 
-            // Queue list
-            if (queue.isEmpty()) {
+            // Queue list - now showing only upcoming songs
+            if (upcomingSongs.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -198,21 +201,21 @@ fun QueueScreen(
                     modifier = Modifier.weight(1f),
                     state = listState
                 ) {
-                    itemsIndexed(queue) { index, song ->
-                        // Skip the current song as it's already displayed in Now Playing
-                        if (song.id != currentSong?.id) {
-                            SongItem(
-                                song = song,
-                                onSongClick = {
-                                    mainViewModel.playSong(it)
-                                },
-                                onRemoveSong = {
-                                    mainViewModel.removeFromQueue(index)
-                                    feedbackMessage = "Song removed from queue"
-                                    showFeedback = true
-                                }
-                            )
-                        }
+                    itemsIndexed(upcomingSongs) { index, song ->
+                        // Calculate the actual queue index for removal
+                        val actualQueueIndex = currentQueueIndex.value + 1 + index
+
+                        SongItem(
+                            song = song,
+                            onSongClick = {
+                                mainViewModel.playSong(it)
+                            },
+                            onRemoveSong = {
+                                mainViewModel.removeFromQueue(actualQueueIndex)
+                                feedbackMessage = "Song removed from queue"
+                                showFeedback = true
+                            }
+                        )
                     }
                 }
             }

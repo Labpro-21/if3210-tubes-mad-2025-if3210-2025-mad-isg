@@ -5,10 +5,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.DropdownMenu
@@ -24,7 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -37,7 +40,9 @@ fun SongItem(
     onSongClick: (Song) -> Unit,
     onAddToQueue: ((Song) -> Unit)? = null,
     onRemoveSong: ((Song) -> Unit)? = null,
-    onToggleLike: ((Song, Boolean) -> Unit)? = null
+    onToggleLike: ((Song, Boolean) -> Unit)? = null,
+    onEditSong: ((Song) -> Unit)? = null,
+    onDeleteSong: ((Song) -> Unit)? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showAddToQueueDialog by remember { mutableStateOf(false) }
@@ -132,6 +137,48 @@ fun SongItem(
                             },
                             onClick = {
                                 onToggleLike(song, !song.isLiked)
+                                showMenu = false
+                            }
+                        )
+                    }
+
+                    // Edit song option (if handler is provided)
+                    if (onEditSong != null) {
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = null,
+                                        tint = Color.White
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Edit Song", color = Color.White)
+                                }
+                            },
+                            onClick = {
+                                onEditSong(song)
+                                showMenu = false
+                            }
+                        )
+                    }
+
+                    // Delete song option (if handler is provided)
+                    if (onDeleteSong != null) {
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = Color.Red
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Delete Song", color = Color.Red)
+                                }
+                            },
+                            onClick = {
+                                onDeleteSong(song)
                                 showMenu = false
                             }
                         )

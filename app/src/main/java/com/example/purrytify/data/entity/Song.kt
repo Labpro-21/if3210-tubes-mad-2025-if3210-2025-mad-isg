@@ -31,5 +31,8 @@ data class Song(
     val lastPlayed: Long? = null, // timestamp kapan terakhir diputar
 
     @ColumnInfo(name = "added_at")
-    val addedAt: Long = System.currentTimeMillis()
+    val addedAt: Long = System.currentTimeMillis(),
+
+    @ColumnInfo(name = "user_id", defaultValue = "-1")
+    val userId: Int = -1
 )

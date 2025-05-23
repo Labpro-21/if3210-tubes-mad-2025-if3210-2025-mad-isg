@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -77,6 +79,21 @@ fun BottomNavbar(navController: NavController) {
             onClick = {
                 if (currentRoute != Destinations.PROFILE_ROUTE) {
                     navController.navigate(Destinations.PROFILE_ROUTE) {
+                        popUpTo(navController.graph.startDestinationId)
+                        launchSingleTop = true
+                    }
+                }
+            }
+        )
+
+        // Add this NavBarItem to the BottomNavbar:
+        NavBarItem(
+            icon = Icons.Outlined.CloudDownload, // Use appropriate icon
+            label = "Online",
+            isSelected = currentRoute == Destinations.ONLINE_SONGS_ROUTE,
+            onClick = {
+                if (currentRoute != Destinations.ONLINE_SONGS_ROUTE) {
+                    navController.navigate(Destinations.ONLINE_SONGS_ROUTE) {
                         popUpTo(navController.graph.startDestinationId)
                         launchSingleTop = true
                     }

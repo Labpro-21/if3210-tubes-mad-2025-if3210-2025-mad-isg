@@ -99,6 +99,57 @@ class MediaPlayerService : Service() {
         }
     }
 
+    // Dalam MediaPlayerService.kt
+    fun playOnlineSong(
+        audioUrl: String,
+        title: String,
+        artist: String,
+        coverUrl: String = "" // Gunakan coverUrl, bukan artworkPath
+    ) {
+        try {
+            Log.d(TAG, "Playing online song: $title - $artist, URL: $audioUrl")
+
+            // Reset media player
+            mediaPlayer.reset()
+
+            // Set data source
+            mediaPlayer.setDataSource(audioUrl)
+
+            // Prepare asynchronously
+            mediaPlayer.prepareAsync()
+
+            // Set listener for when prepared
+            mediaPlayer.setOnPreparedListener {
+                // Start playback
+                it.start()
+
+                // Create song model with proper fields
+                val song = Song(
+                    id = -1, // Temporary ID for online song
+                    title = title,
+                    artist = artist,
+                    coverUrl = coverUrl, // Use coverUrl parameter
+                    filePath = audioUrl,
+                    duration = it.duration.toLong(),
+                    isPlaying = true,
+                    isLiked = false,
+                    isOnline = true,
+                    lastPlayed = System.currentTimeMillis()
+                )
+
+                _currentSong.value = song
+                _isPlaying.value = true
+                _duration.value = it.duration
+
+                // Start tracking position
+                startPositionTracking()
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error playing online song", e)
+        }
+    }
+
     fun playSong(song: Song) {
         try {
             Log.d(TAG, "Playing song: ${song.title}, path: ${song.filePath}")

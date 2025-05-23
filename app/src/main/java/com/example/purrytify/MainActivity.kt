@@ -55,6 +55,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.lifecycle.ViewModelProvider
 import com.example.purrytify.data.repository.SongRepository
+import com.example.purrytify.util.SongDownloadManager
 
 class MainActivity : ComponentActivity() {
     private val TAG = "MainActivity"
@@ -67,9 +68,19 @@ class MainActivity : ComponentActivity() {
     private val isInitialized = mutableStateOf(false)
     private lateinit var songCompletionReceiver: SongCompletionReceiver
     private lateinit var localBroadcastManager: LocalBroadcastManager
+    private lateinit var downloadManager: SongDownloadManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Inisialisasi NetworkConnectionObserver
+        networkConnectionObserver = NetworkConnectionObserver(applicationContext)
+        networkConnectionObserver.start()
+
+        tokenManager = (application as PurrytifyApp).tokenManager
+
+        // Initialize SongDownloadManager
+        downloadManager = SongDownloadManager(this)
 
         // Lightweight initialization first
         lifecycleScope.launch(Dispatchers.Default) {
@@ -136,6 +147,7 @@ class MainActivity : ComponentActivity() {
                                     AppNavigation(
                                         navController = navController,
                                         networkConnectionObserver = networkConnectionObserver,
+                                        mainViewModel = mainViewModel // Tambahkan parameter ini
                                     )
                                 }
                             }
@@ -221,6 +233,9 @@ class MainActivity : ComponentActivity() {
                 startTokenRefreshService()
             }
 
+            // Initialize download manager
+            downloadManager = SongDownloadManager(this@MainActivity)
+
             // Mark initialization as complete
             isInitialized.value = true
             Log.d(TAG, "App initialization completed")
@@ -292,6 +307,11 @@ class MainActivity : ComponentActivity() {
         networkConnectionObserver.stop()
         stopTokenRefreshService()
         mainViewModel.unbindService(this)
+
+        // Release download manager resources
+        if (::downloadManager.isInitialized) {
+            downloadManager.release()
+        }
     }
 
     private fun startTokenRefreshService() {

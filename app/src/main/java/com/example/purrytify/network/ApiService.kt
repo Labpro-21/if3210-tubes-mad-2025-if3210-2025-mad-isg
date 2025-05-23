@@ -2,6 +2,7 @@ package com.example.purrytify.network
 
 import com.example.purrytify.models.LoginRequest
 import com.example.purrytify.models.LoginResponse
+import com.example.purrytify.models.OnlineSong
 import com.example.purrytify.models.RefreshTokenRequest
 import com.example.purrytify.models.RefreshTokenResponse
 import com.example.purrytify.models.UserProfile
@@ -10,6 +11,7 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.Path
 
 interface ApiService {
     @POST("/api/login")
@@ -23,4 +25,14 @@ interface ApiService {
 
     @POST("/api/refresh-token")
     suspend fun refreshToken(@Body refreshTokenRequest: RefreshTokenRequest): Response<RefreshTokenResponse>
+
+    // Online songs endpoints
+    @GET("api/top-songs/global")
+    suspend fun getGlobalTopSongs(): Response<List<OnlineSong>>
+
+    @GET("api/top-songs/{country_code}")
+    suspend fun getCountryTopSongs(@Path("country_code") countryCode: String): Response<List<OnlineSong>>
+
+    @GET("api/songs/{song_id}")
+    suspend fun getSongById(@Path("song_id") songId: Int): Response<OnlineSong>
 }

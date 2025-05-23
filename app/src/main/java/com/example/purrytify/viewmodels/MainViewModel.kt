@@ -11,6 +11,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.purrytify.data.entity.Song as EntitySong
 import com.example.purrytify.data.repository.SongRepository
+import com.example.purrytify.models.OnlineSong
 import com.example.purrytify.models.Song
 import com.example.purrytify.service.MediaPlayerService
 import com.example.purrytify.util.SongMapper
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+
 
 class MainViewModel(private val songRepository: SongRepository) : ViewModel() {
     private val TAG = "MainViewModel"
@@ -469,6 +471,29 @@ class MainViewModel(private val songRepository: SongRepository) : ViewModel() {
             } ?: run {
                 Log.d(TAG, "No song found in all songs at index $nextIndex")
                 stopCurrentPlayback()
+            }
+        }
+    }
+
+    // Di MainViewModel.kt
+    fun playOnlineSong(onlineSong: OnlineSong) {
+        viewModelScope.launch {
+            Log.d(TAG, "Playing online song: ${onlineSong.title}")
+
+            try {
+                if (mediaPlayerService != null) {
+                    // Play using service - gunakan coverUrl bukan artworkPath
+                    mediaPlayerService?.playOnlineSong(
+                        audioUrl = onlineSong.audioUrl,
+                        title = onlineSong.title,
+                        artist = onlineSong.artist,
+                        coverUrl = onlineSong.artworkUrl // Gunakan parameter yang benar
+                    )
+                } else {
+                    Log.e(TAG, "MediaPlayerService is not available")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error playing online song", e)
             }
         }
     }

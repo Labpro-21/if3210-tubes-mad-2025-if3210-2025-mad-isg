@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.room.*
 import com.example.purrytify.data.entity.Song
 
+
 @Dao
 interface SongDao {
     @Query("SELECT * FROM songs ORDER BY added_at DESC")
@@ -77,4 +78,19 @@ interface SongDao {
 
     @Query("SELECT COUNT(*) FROM songs WHERE user_id = :userId AND last_played IS NOT NULL")
     fun countListenedSongsForUser(userId: Int): Int
+
+    @Query("SELECT COUNT(*) FROM songs WHERE online_id = :onlineId")
+    fun getCountByOnlineId(onlineId: Int): Int
+
+    @Query("SELECT * FROM songs WHERE is_online = 1 AND user_id = :userId ORDER BY added_at DESC")
+    fun getDownloadedOnlineSongs(userId: Int): List<Song>
+
+    @Query("SELECT * FROM songs WHERE online_id = :onlineId AND user_id = :userId LIMIT 1")
+    fun getDownloadedSongByOnlineId(onlineId: Int, userId: Int): Song?
+
+    @Query("SELECT * FROM songs WHERE online_id = :onlineId LIMIT 1")
+    fun getSongByOnlineId(onlineId: Int): Song?
+
+    @Query("SELECT * FROM songs WHERE is_online = 1 ORDER BY title ASC")
+    fun getDownloadedOnlineSongs(): LiveData<List<Song>>
 }

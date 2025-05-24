@@ -40,6 +40,7 @@ import java.util.concurrent.TimeUnit
 import androidx.activity.ComponentActivity
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.Share
+import com.example.purrytify.ui.components.ShareOptionsDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -231,24 +232,11 @@ fun PlayerScreen(
 
                     // Share button (only for online songs) - TAMBAHAN BARU
                     if (song.isOnline && song.onlineId != null) {
-                        // print log for debugging
-                        println("Sharing song: ${song.title} by ${song.artist}")
+                        var showShareDialog by remember { mutableStateOf(false) }
+
                         IconButton(
                             onClick = {
-                                // Create OnlineSong from current song for sharing
-                                val onlineSong = com.example.purrytify.models.OnlineSong(
-                                    id = song.onlineId!!,
-                                    title = song.title,
-                                    artist = song.artist,
-                                    artworkUrl = song.coverUrl,
-                                    audioUrl = song.filePath, // For online songs, filePath contains the URL
-                                    durationString = formatDuration(song.duration), // Convert back to mm:ss format
-                                    country = "",
-                                    rank = 0,
-                                    createdAt = "",
-                                    updatedAt = ""
-                                )
-                                com.example.purrytify.util.ShareUtils.shareSongUrl(context, onlineSong)
+                                showShareDialog = true
                             }
                         ) {
                             Icon(
@@ -256,6 +244,27 @@ fun PlayerScreen(
                                 contentDescription = "Share Song",
                                 tint = Color.White.copy(alpha = 0.7f),
                                 modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        // Show share options dialog
+                        if (showShareDialog) {
+                            val onlineSong = com.example.purrytify.models.OnlineSong(
+                                id = song.onlineId!!,
+                                title = song.title,
+                                artist = song.artist,
+                                artworkUrl = song.coverUrl,
+                                audioUrl = song.filePath,
+                                durationString = formatDuration(song.duration),
+                                country = "",
+                                rank = 0,
+                                createdAt = "",
+                                updatedAt = ""
+                            )
+
+                            ShareOptionsDialog(
+                                onlineSong = onlineSong,
+                                onDismiss = { showShareDialog = false }
                             )
                         }
                     }

@@ -40,16 +40,28 @@ import com.example.purrytify.viewmodels.HomeViewModel
 import com.example.purrytify.viewmodels.MainViewModel
 import com.example.purrytify.viewmodels.ViewModelFactory
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.navigation.NavController
+import com.example.purrytify.ui.navigation.Destinations
 
+// UPDATE signature HomeScreen untuk menerima navController:
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    navController: NavController? = null // TAMBAHKAN parameter ini
+) {
     val context = LocalContext.current
-    // HomeViewModel for managing new songs and recently played songs
+    // HomeViewModel untuk managing new songs dan recently played songs
     val homeViewModel: HomeViewModel = viewModel(
         factory = ViewModelFactory.getInstance(context)
     )
 
-    // MainViewModel for managing the current song and playback state
+    // MainViewModel untuk managing current song dan playback state
     val mainViewModel: MainViewModel = viewModel(
         viewModelStoreOwner = context as ComponentActivity,
         factory = ViewModelFactory.getInstance(context)
@@ -77,15 +89,38 @@ fun HomeScreen() {
                 .padding(horizontal = 16.dp)
                 .padding(top = 20.dp)
         ) {
-            // Section title: New Songs
+            // ✅ GANTI Section title "New Songs" dengan Row yang berisi title dan tombol scan
             item {
-                Text(
-                    text = "New Songs",
-                    color = Color.White,
-                    fontFamily = FontFamily(Font(R.font.poppins_semi_bold)),
-                    fontSize = 24.sp,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "New Songs",
+                        color = Color.White,
+                        fontFamily = FontFamily(Font(R.font.poppins_semi_bold)),
+                        fontSize = 24.sp
+                    )
+
+                    // ✅ TAMBAHKAN tombol scan QR di sebelah kanan
+                    if (navController != null) {
+                        IconButton(
+                            onClick = {
+                                navController.navigate(Destinations.QR_SCANNER_ROUTE)
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.QrCode,
+                                contentDescription = "Scan QR Code",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -107,7 +142,6 @@ fun HomeScreen() {
 
                 Spacer(modifier = Modifier.height(20.dp))
             }
-
 
             // Section title: Recently Played
             item {
@@ -172,13 +206,6 @@ fun HomeScreen() {
     }
 }
 
-/**
- * Memulai pemutaran lagu
- *
- * @param song Lagu yang akan diputar
- * @param homeViewModel ViewModel untuk HomeScreen
- * @param mainViewModel ViewModel untuk keseluruhan aplikasi
- */
 private fun playSong(
     song: Song,
     homeViewModel: HomeViewModel,

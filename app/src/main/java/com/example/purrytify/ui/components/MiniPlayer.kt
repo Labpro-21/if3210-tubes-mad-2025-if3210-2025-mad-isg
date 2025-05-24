@@ -33,6 +33,11 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.purrytify.R
 import androidx.compose.material.icons.filled.Share
+// ✅ TAMBAHKAN import yang hilang:
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 @Composable
 fun MiniPlayer(
@@ -102,8 +107,22 @@ fun MiniPlayer(
                 )
             }
 
+            // ✅ PERBAIKAN: Share button with proper state management
             if (currentSong.isOnline && currentSong.onlineId != null) {
+                var showShareDialog by remember { mutableStateOf(false) }
+
                 IconButton(onClick = {
+                    showShareDialog = true
+                }) {
+                    Icon(
+                        imageVector = Icons.Filled.Share,
+                        contentDescription = "Share",
+                        tint = Color.White
+                    )
+                }
+
+                // Show share options dialog
+                if (showShareDialog) {
                     // Helper function to convert milliseconds to mm:ss format
                     fun formatDurationFromMs(durationMs: Long): String {
                         val minutes = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(durationMs)
@@ -112,25 +131,22 @@ fun MiniPlayer(
                         return String.format("%d:%02d", minutes, seconds)
                     }
 
-                    // Create OnlineSong from current song for sharing
                     val onlineSong = com.example.purrytify.models.OnlineSong(
                         id = currentSong.onlineId!!,
                         title = currentSong.title,
                         artist = currentSong.artist,
                         artworkUrl = currentSong.coverUrl,
-                        audioUrl = currentSong.filePath, // For online songs, filePath contains the URL
+                        audioUrl = currentSong.filePath,
                         durationString = formatDurationFromMs(currentSong.duration),
                         country = "",
                         rank = 0,
                         createdAt = "",
                         updatedAt = ""
                     )
-                    com.example.purrytify.util.ShareUtils.shareSongUrl(context, onlineSong)
-                }) {
-                    Icon(
-                        imageVector = Icons.Filled.Share,
-                        contentDescription = "Share",
-                        tint = Color.White
+
+                    ShareOptionsDialog(
+                        onlineSong = onlineSong,
+                        onDismiss = { showShareDialog = false }
                     )
                 }
             }

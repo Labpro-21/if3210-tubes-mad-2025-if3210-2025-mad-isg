@@ -163,21 +163,24 @@ fun SongItem(
                                 }
                             },
                             onClick = {
-                                // Helper function to convert milliseconds to mm:ss format
-                                fun formatDurationFromMs(durationMs: Long): String {
+                                // Set a state to show ShareOptionsDialog
+                                // This would need to be handled by the parent component
+                                showMenu = false
+
+                                // For now, keep the direct sharing - but ideally use ShareOptionsDialog
+                                val formatDurationFromMs = { durationMs: Long ->
                                     val minutes = TimeUnit.MILLISECONDS.toMinutes(durationMs)
                                     val seconds = TimeUnit.MILLISECONDS.toSeconds(durationMs) -
                                             TimeUnit.MINUTES.toSeconds(minutes)
-                                    return String.format("%d:%02d", minutes, seconds)
+                                    String.format("%d:%02d", minutes, seconds)
                                 }
 
-                                // Create OnlineSong from current song for sharing
                                 val onlineSong = com.example.purrytify.models.OnlineSong(
                                     id = song.onlineId!!,
                                     title = song.title,
                                     artist = song.artist,
                                     artworkUrl = song.coverUrl,
-                                    audioUrl = song.filePath, // For online songs, filePath contains the URL
+                                    audioUrl = song.filePath,
                                     durationString = formatDurationFromMs(song.duration),
                                     country = "",
                                     rank = 0,
@@ -185,9 +188,7 @@ fun SongItem(
                                     updatedAt = ""
                                 )
 
-                                // Use context yang sudah didapat di level composable
                                 ShareUtils.shareSongUrl(context, onlineSong)
-                                showMenu = false
                             }
                         )
                     }

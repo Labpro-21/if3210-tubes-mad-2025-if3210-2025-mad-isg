@@ -54,11 +54,23 @@ import com.example.purrytify.viewmodels.MainViewModel
 import com.example.purrytify.viewmodels.RecommendationViewModel
 import com.example.purrytify.viewmodels.ViewModelFactory
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.navigation.NavController
+import com.example.purrytify.ui.navigation.Destinations
+
+// UPDATE signature HomeScreen untuk menerima navController:import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    navController: NavController? = null // TAMBAHKAN parameter ini
+) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
@@ -69,6 +81,7 @@ fun HomeScreen() {
         factory = ViewModelFactory.getInstance(context)
     )
 
+    // MainViewModel untuk managing current song dan playback state
     val mainViewModel: MainViewModel = viewModel(
         viewModelStoreOwner = context as ComponentActivity,
         factory = ViewModelFactory.getInstance(context)

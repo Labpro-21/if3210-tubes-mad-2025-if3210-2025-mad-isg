@@ -33,18 +33,19 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.purrytify.R
 import androidx.compose.material.icons.filled.Share
-// ✅ TAMBAHKAN import yang hilang:
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.setValueimport com.example.purrytify.ui.components.AudioDeviceIndicatorMini
+
 
 @Composable
 fun MiniPlayer(
     currentSong: Song?,
     isPlaying: Boolean,
     onPlayPauseClick: () -> Unit,
-    onPlayerClick: () -> Unit
+    onPlayerClick: () -> Unit,
+    onAudioDeviceClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
 
@@ -157,6 +158,12 @@ fun MiniPlayer(
                     imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                     contentDescription = if (isPlaying) "Pause" else "Play",
                     tint = Color.White
+                )
+            }
+
+            if (onAudioDeviceClick != null) {
+                AudioDeviceIndicatorMini(
+                    onClick = onAudioDeviceClick
                 )
             }
         }

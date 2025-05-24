@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("kotlin-kapt")
+    id("kotlin-parcelize")
 }
 
 android {
@@ -62,6 +63,7 @@ dependencies {
     implementation(libs.volley)
     implementation(libs.espresso.core)
     implementation(libs.androidx.recyclerview.v130)
+
     val composeBom = platform("androidx.compose:compose-bom:2024.02.02")
     implementation(composeBom)
     androidTestImplementation(composeBom)
@@ -96,6 +98,7 @@ dependencies {
     // Encrypted SharedPreferences
     implementation(libs.androidx.security.crypto)
     implementation(libs.androidx.datastore.preferences)
+
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
@@ -103,12 +106,12 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
 
     // Room dependencies
-    val roomVersion = "2.5.2"  // Downgrade dari 2.6.1
+    val roomVersion = "2.5.2"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     kapt("androidx.room:room-compiler:$roomVersion")
 
-
+    // Image loading
     implementation("io.coil-kt:coil-compose:2.4.0")
     implementation("io.coil-kt:coil-svg:2.4.0")
     implementation("io.coil-kt:coil-video:2.4.0")
@@ -117,8 +120,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
-    implementation ("androidx.constraintlayout:constraintlayout:2.2.1")
-    implementation ("io.coil-kt:coil-compose:2.4.0")
+    implementation("androidx.constraintlayout:constraintlayout:2.2.1")
 
     // Background services dan notifications
     implementation("androidx.work:work-runtime-ktx:2.9.0")
@@ -151,6 +153,26 @@ dependencies {
     // LiveData, StateFlow, dan SharedFlow
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
     implementation("androidx.lifecycle:lifecycle-process:2.7.0")
-    implementation ("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
-    implementation ("com.google.accompanist:accompanist-swiperefresh:0.25.1")
+    implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
+    implementation("com.google.accompanist:accompanist-swiperefresh:0.25.1")
+
+    // Media
+    implementation("androidx.media:media:1.6.0")
+
+    // Location services (Google Play Services)
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+
+    // Permissions handling
+    implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+
+    // File utilities
+    implementation("commons-io:commons-io:2.11.0")
+
+    // Multipart request untuk Retrofit
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    implementation("com.google.android.libraries.places:places:3.3.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
 }

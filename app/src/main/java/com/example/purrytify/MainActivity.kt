@@ -2,8 +2,11 @@ package com.example.purrytify
 
 import android.content.BroadcastReceiver
 import android.content.Context
+import android.Manifest
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -24,15 +27,18 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.compose.rememberNavController
+import com.example.purrytify.data.repository.SongRepository
 import com.example.purrytify.receivers.SongCompletionReceiver
 import com.example.purrytify.service.TokenRefreshService
 import com.example.purrytify.ui.components.BottomNavbar
@@ -46,17 +52,12 @@ import com.example.purrytify.ui.theme.PurrytifyTheme
 import com.example.purrytify.util.EventBus
 import com.example.purrytify.util.NetworkConnectionObserver
 import com.example.purrytify.util.TokenManager
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import com.example.purrytify.viewmodels.MainViewModel
 import com.example.purrytify.viewmodels.ViewModelFactory
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.lifecycle.ViewModelProvider
-import com.example.purrytify.data.repository.SongRepository
 import com.example.purrytify.util.SongDownloadManager
 import com.example.purrytify.util.NotificationPermissionHandler
 
@@ -137,7 +138,10 @@ class MainActivity : ComponentActivity() {
                                                     currentSong = currentSong,
                                                     isPlaying = isPlaying,
                                                     onPlayPauseClick = { mainViewModel.togglePlayPause() },
-                                                    onPlayerClick = { showPlayerScreen = true }
+                                                    onPlayerClick = { showPlayerScreen = true },
+                                                    onAudioDeviceClick = {
+                                                        navController.navigate("audio_devices")
+                                                    }
                                                 )
                                             }
 
@@ -298,7 +302,7 @@ class MainActivity : ComponentActivity() {
                     mainViewModel = ViewModelProvider(
                         this@MainActivity,
                         ViewModelFactory.getInstance(applicationContext)
-                    ).get(MainViewModel::class.java)
+                    )[MainViewModel::class.java]
                     Log.d(TAG, "MainViewModel initialized")
 
                     // Bind media player service
@@ -526,6 +530,50 @@ class MainActivity : ComponentActivity() {
                 } catch (e: Exception) {
                     Log.e(TAG, "Error checking current song after login: ${e.message}")
                     mainViewModel.handleLogout()
+                }
+            }
+        }
+    }
+
+    private fun requestBluetoothPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val permissions = arrayOf(
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.BLUETOOTH_SCAN
+            )
+
+            if (permissions.any {
+                    ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+                }) {
+                ActivityCompat.requestPermissions(this, permissions, BLUETOOTH_PERMISSION_REQUEST_CODE)
+            }
+        }
+    }
+
+    companion object {
+        private const val BLUETOOTH_PERMISSION_REQUEST_CODE = 1001
+    }
+
+    // Handle permission result:
+    @Deprecated("Deprecated in Java")
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            BLUETOOTH_PERMISSION_REQUEST_CODE -> {
+                if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                    // Permissions granted, refresh devices
+                    Log.d(TAG, "Bluetooth permissions granted")
+                } else {
+                    // Show message that Bluetooth devices won't be available
+                    Toast.makeText(
+                        this,
+                        "Bluetooth permission required to see wireless audio devices",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
         }

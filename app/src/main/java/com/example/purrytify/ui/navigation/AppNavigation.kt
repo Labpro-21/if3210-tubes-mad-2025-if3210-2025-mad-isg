@@ -1,21 +1,25 @@
 package com.example.purrytify.ui.navigation
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.purrytify.ui.components.NoInternetScreen
 import com.example.purrytify.ui.screens.HomeScreen
 import com.example.purrytify.ui.screens.LibraryScreen
+import com.example.purrytify.ui.screens.OnlineSongsScreen
 import com.example.purrytify.ui.screens.ProfileScreen
+import com.example.purrytify.ui.screens.QRScannerScreen
+import com.example.purrytify.ui.screens.QueueScreen
 import com.example.purrytify.ui.screens.EditProfileScreen
 import com.example.purrytify.util.NetworkConnectionObserver
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import com.example.purrytify.util.toSong
 import com.example.purrytify.ui.screens.AudioDeviceScreen
-import com.example.purrytify.ui.screens.QueueScreen
+import com.example.purrytify.viewmodels.MainViewModel
 
 object Destinations {
     const val HOME_ROUTE = "home"
@@ -23,6 +27,8 @@ object Destinations {
     const val PROFILE_ROUTE = "profile"
     const val EDIT_PROFILE_ROUTE = "edit_profile"
     const val QUEUE_ROUTE = "queue"
+    const val ONLINE_SONGS_ROUTE = "online_songs"
+    const val QR_SCANNER_ROUTE = "qr_scanner"
     const val AUDIO_DEVICES_ROUTE = "audio_devices"
 }
 
@@ -30,10 +36,11 @@ object Destinations {
 fun AppNavigation(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
-    networkConnectionObserver: NetworkConnectionObserver,
+    mainViewModel: MainViewModel,
+    networkConnectionObserver: NetworkConnectionObserver
 ) {
 
-    val isConnected by networkConnectionObserver.isConnected.collectAsState()
+    val context = LocalContext.current
 
     NavHost(
         navController = navController,
@@ -41,7 +48,7 @@ fun AppNavigation(
         modifier = modifier
     ) {
         composable(Destinations.HOME_ROUTE) {
-            HomeScreen()
+            HomeScreen(navController = navController)
         }
         composable(Destinations.LIBRARY_ROUTE) {
             LibraryScreen()

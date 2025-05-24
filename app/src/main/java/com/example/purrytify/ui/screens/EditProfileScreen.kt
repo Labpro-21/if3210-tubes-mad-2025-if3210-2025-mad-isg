@@ -73,9 +73,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.purrytify.R
-import com.example.purrytify.models.LocationResult
 import com.example.purrytify.repository.UserRepository
-import com.example.purrytify.ui.components.CountrySelectorDialog
 import com.example.purrytify.ui.components.LocationSelectionDialog
 import com.example.purrytify.ui.theme.BACKGROUND_COLOR
 import com.example.purrytify.ui.theme.GREEN_COLOR
@@ -83,17 +81,6 @@ import com.example.purrytify.util.TokenManager
 import com.example.purrytify.viewmodels.EditProfileViewModel
 import kotlinx.coroutines.launch
 
-/**
- * Screen untuk edit profile pengguna dengan enhanced location selection
- *
- * Fungsi utama:
- * 1. Display current profile information
- * 2. Allow photo selection dari camera atau gallery
- * 3. Allow location selection dengan auto detect atau manual
- * 4. Save changes ke server dengan proper validation
- * 5. Handle permissions dan error states
- * 6. Provide multiple fallback options untuk location selection
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
@@ -104,7 +91,7 @@ fun EditProfileScreen(
     val tokenManager = TokenManager(context)
     val userRepository = UserRepository(tokenManager)
 
-    // ViewModel dengan dependency injection manual
+    // ViewModel
     val viewModel: EditProfileViewModel = viewModel(
         factory = object : androidx.lifecycle.ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
@@ -132,7 +119,6 @@ fun EditProfileScreen(
     var showLocationSelectionDialog by remember { mutableStateOf(false) }
     var showCountrySelectorDialog by remember { mutableStateOf(false) }
 
-    // Snackbar state
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -141,10 +127,8 @@ fun EditProfileScreen(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            Log.d("EditProfileScreen", "Camera result received, processing photo")
+            Log.d("EditProfileScreen", "Camera result received")
             viewModel.setPhotoFromCamera()
-        } else {
-            Log.w("EditProfileScreen", "Camera result cancelled or failed")
         }
     }
 
@@ -153,47 +137,58 @@ fun EditProfileScreen(
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val photoUri = result.data?.data
-            Log.d("EditProfileScreen", "Gallery result received: $photoUri")
+            Log.d("EditProfileScreen", "Gallery result: $photoUri")
             viewModel.setPhotoFromGallery(photoUri)
-        } else {
-            Log.w("EditProfileScreen", "Gallery result cancelled")
         }
     }
 
-    val googleMapsLauncher = rememberLauncherForActivityResult(
+    rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        Log.d("EditProfileScreen", "Google Maps result: ${result.resultCode}")
-        Log.d("EditProfileScreen", "Result data: ${result.data}")
-        Log.d("EditProfileScreen", "Result data URI: ${result.data?.data}")
+        Log.d("EditProfileScreen", "=== GOOGLE MAPS RESULT ===")
+        Log.d("EditProfileScreen", "Result code: ${result.resultCode}")
+        Log.d("EditProfileScreen", "Data: ${result.data}")
+        Log.d("EditProfileScreen", "URI: ${result.data?.data}")
 
-        if (result.resultCode == Activity.RESULT_OK) {
-            val locationResult = viewModel.locationHelper.parseGoogleMapsResult(result.data)
-            if (locationResult != null) {
-                Log.d("EditProfileScreen", "Successfully parsed location: ${locationResult.countryName}")
-                viewModel.setManualLocation(locationResult)
-            } else {
-                Log.w("EditProfileScreen", "Failed to parse Google Maps result, showing fallback")
-                scope.launch {
-                    snackbarHostState.showSnackbar(
-                        message = "Could not get location from Maps. Please try selecting your country from the list.",
-                        duration = SnackbarDuration.Long
-                    )
+        when (result.resultCode) {
+            Activity.RESULT_OK -> {
+                val locationResult = viewModel.locationHelper.parseGoogleMapsResult(result.data)
+                if (locationResult != null) {
+                    Log.d("EditProfileScreen", "Location parsed: ${locationResult.countryName}")
+                    viewModel.setManualLocation(locationResult)
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = "Location selected: ${locationResult.countryName}",
+                            duration = SnackbarDuration.Short
+                        )
+                    }
+                } else {
+                    Log.w("EditProfileScreen", "Failed to parse location")
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = "Could not get location from Maps. Please select from country list.",
+                            duration = SnackbarDuration.Long
+                        )
+                    }
+                    showCountrySelectorDialog = true
                 }
+            }
+            Activity.RESULT_CANCELED -> {
+                Log.d("EditProfileScreen", "Maps cancelled")
+            }
+            else -> {
+                Log.w("EditProfileScreen", "Unexpected result: ${result.resultCode}")
                 showCountrySelectorDialog = true
             }
-        } else {
-            Log.w("EditProfileScreen", "Google Maps cancelled or failed")
         }
     }
-
 
     // Permission launchers
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
-        val coarseLocationGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+        val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
+        val coarseLocationGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
 
         if (fineLocationGranted || coarseLocationGranted) {
             viewModel.onLocationPermissionGranted()
@@ -251,48 +246,71 @@ fun EditProfileScreen(
         }
     }
 
-    // Load profile on first load
+    // Load profile
     LaunchedEffect(Unit) {
         viewModel.loadCurrentProfile()
     }
 
-    // Show dialogs
+    val locationPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        Log.d("EditProfileScreen", "=== LOCATION PICKER RESULT ===")
+        Log.d("EditProfileScreen", "Result code: ${result.resultCode}")
+
+        val locationResult = viewModel.locationHelper.parsePlacePickerResult(
+            result.resultCode,
+            result.data
+        )
+
+        if (locationResult != null) {
+            Log.d("EditProfileScreen", "Location parsed: ${locationResult.countryName}")
+            viewModel.setManualLocation(locationResult)
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = "Location selected: ${locationResult.countryName}",
+                    duration = SnackbarDuration.Short
+                )
+            }
+        } else {
+            Log.w("EditProfileScreen", "Failed to parse location")
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = "Could not get location. Please select from country list.",
+                    duration = SnackbarDuration.Long
+                )
+            }
+            showCountrySelectorDialog = true
+        }
+    }
+
+// Update LocationSelectionDialog untuk menggunakan location picker
     if (showLocationSelectionDialog) {
         LocationSelectionDialog(
             onGoogleMapsClick = {
-                val mapsIntent = viewModel.locationHelper.createGoogleMapsIntent()
-                if (mapsIntent.resolveActivity(context.packageManager) != null) {
-                    googleMapsLauncher.launch(mapsIntent)
-                } else {
-                    scope.launch {
-                        snackbarHostState.showSnackbar(
-                            message = "Google Maps is not installed",
-                            duration = SnackbarDuration.Short
-                        )
+                try {
+                    // Gunakan location picker intent
+                    val intent = viewModel.locationHelper.createLocationPickerIntent()
+                    locationPickerLauncher.launch(intent)
+                } catch (e: Exception) {
+                    Log.e("EditProfileScreen", "Error launching location picker: ${e.message}")
+
+                    // Fallback ke maps selector
+                    try {
+                        val mapsIntent = viewModel.locationHelper.createMapsSelectorIntent()
+                        locationPickerLauncher.launch(mapsIntent)
+                    } catch (ex: Exception) {
+                        Log.e("EditProfileScreen", "Error launching maps: ${ex.message}")
+                        scope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = "Error opening location picker: ${ex.message}",
+                                duration = SnackbarDuration.Long
+                            )
+                        }
+                        showCountrySelectorDialog = true
                     }
                 }
             },
-            onCountryListClick = {
-                showCountrySelectorDialog = true
-            },
             onDismiss = { showLocationSelectionDialog = false }
-        )
-    }
-
-    if (showCountrySelectorDialog) {
-        CountrySelectorDialog(
-            onCountrySelected = { countryCode, countryName ->
-                val locationResult = LocationResult(
-                    countryCode = countryCode,
-                    countryName = countryName,
-                    address = countryName,
-                    latitude = null,
-                    longitude = null
-                )
-                viewModel.setManualLocation(locationResult)
-                showCountrySelectorDialog = false
-            },
-            onDismiss = { showCountrySelectorDialog = false }
         )
     }
 
@@ -306,12 +324,7 @@ fun EditProfileScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        if (viewModel.hasUnsavedChanges()) {
-                            // TODO: Show confirmation dialog
-                        }
-                        navController.navigateUp()
-                    }) {
+                    IconButton(onClick = { navController.navigateUp() }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
@@ -374,7 +387,6 @@ fun EditProfileScreen(
                     isLoadingLocation = isLoadingLocation,
                     onAutoDetectClick = { viewModel.getCurrentLocation() },
                     onManualSelectClick = {
-                        // Show location selection dialog instead of direct Google Maps
                         showLocationSelectionDialog = true
                     },
                     onClearLocation = { viewModel.clearSelectedLocation() }
@@ -421,14 +433,6 @@ fun EditProfileScreen(
     }
 }
 
-/**
- * Komponen untuk section profile photo
- *
- * Fungsi:
- * 1. Display current atau selected profile photo
- * 2. Provide buttons untuk camera, gallery, dan clear
- * 3. Handle loading states dan errors
- */
 @Composable
 fun ProfilePhotoSection(
     currentProfile: com.example.purrytify.models.UserProfile?,
@@ -448,7 +452,6 @@ fun ProfilePhotoSection(
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        // Current/Selected Photo
         Box(
             modifier = Modifier
                 .size(120.dp)
@@ -458,7 +461,6 @@ fun ProfilePhotoSection(
             contentAlignment = Alignment.Center
         ) {
             if (selectedPhotoUri != null) {
-                // Show selected photo
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(selectedPhotoUri)
@@ -469,7 +471,6 @@ fun ProfilePhotoSection(
                     contentScale = ContentScale.Crop
                 )
             } else if (currentProfile != null) {
-                // Show current profile photo
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data("http://34.101.226.132:3000/uploads/profile-picture/${currentProfile.profilePhoto}")
@@ -493,11 +494,9 @@ fun ProfilePhotoSection(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Photo action buttons
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Camera button
             OutlinedButton(
                 onClick = onCameraClick,
                 colors = ButtonDefaults.outlinedButtonColors(
@@ -516,7 +515,6 @@ fun ProfilePhotoSection(
                 Text("Camera")
             }
 
-            // Gallery button
             OutlinedButton(
                 onClick = onGalleryClick,
                 colors = ButtonDefaults.outlinedButtonColors(
@@ -535,7 +533,6 @@ fun ProfilePhotoSection(
                 Text("Gallery")
             }
 
-            // Clear button (only show if photo selected)
             if (selectedPhotoUri != null) {
                 TextButton(
                     onClick = onClearPhoto,
@@ -550,14 +547,6 @@ fun ProfilePhotoSection(
     }
 }
 
-/**
- * Komponen untuk section location dengan enhanced UI
- *
- * Fungsi:
- * 1. Display current dan selected location
- * 2. Provide buttons untuk auto detect dan manual select
- * 3. Handle loading states dan show clear option
- */
 @Composable
 fun LocationSection(
     currentProfile: com.example.purrytify.models.UserProfile?,
@@ -576,7 +565,6 @@ fun LocationSection(
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        // Current location display
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
@@ -637,12 +625,10 @@ fun LocationSection(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Location action buttons
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Auto detect button
             OutlinedButton(
                 onClick = onAutoDetectClick,
                 enabled = !isLoadingLocation,
@@ -670,7 +656,6 @@ fun LocationSection(
                 Text("Auto Detect")
             }
 
-            // Manual select button
             OutlinedButton(
                 onClick = onManualSelectClick,
                 colors = ButtonDefaults.outlinedButtonColors(
@@ -691,7 +676,6 @@ fun LocationSection(
             }
         }
 
-        // Clear location button (only show if location selected)
         if (selectedLocation != null) {
             Spacer(modifier = Modifier.height(8.dp))
             TextButton(

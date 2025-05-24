@@ -15,16 +15,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * ViewModel untuk mengelola edit profile dengan enhanced location handling
- *
- * Fungsi utama:
- * 1. Mengelola state UI untuk edit profile
- * 2. Handle location selection dengan multiple fallback methods
- * 3. Handle photo selection dari camera dan gallery
- * 4. Kirim perubahan ke server dengan proper validation
- * 5. Enhanced error handling dan user feedback
- */
 class EditProfileViewModel(
     application: Application,
     private val userRepository: UserRepository
@@ -51,15 +41,12 @@ class EditProfileViewModel(
     private val _successMessage = MutableStateFlow<String?>(null)
     val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
 
-    // Location state dengan enhanced handling
+    // Location state
     private val _selectedLocation = MutableStateFlow<LocationResult?>(null)
     val selectedLocation: StateFlow<LocationResult?> = _selectedLocation.asStateFlow()
 
     private val _isLoadingLocation = MutableStateFlow(false)
     val isLoadingLocation: StateFlow<Boolean> = _isLoadingLocation.asStateFlow()
-
-    private val _locationError = MutableStateFlow<String?>(null)
-    val locationError: StateFlow<String?> = _locationError.asStateFlow()
 
     // Photo state
     private val _selectedPhotoUri = MutableStateFlow<Uri?>(null)
@@ -73,13 +60,7 @@ class EditProfileViewModel(
     val needCameraPermission: StateFlow<Boolean> = _needCameraPermission.asStateFlow()
 
     /**
-     * Fungsi untuk load current profile data
-     *
-     * Alur kerja:
-     * 1. Set loading state
-     * 2. Call repository untuk get profile
-     * 3. Update current profile state
-     * 4. Handle error jika ada
+     * Load current profile data
      */
     fun loadCurrentProfile() {
         viewModelScope.launch {
@@ -105,60 +86,39 @@ class EditProfileViewModel(
     }
 
     /**
-     * ENHANCED: Fungsi untuk mendapatkan lokasi current dengan better error handling
-     *
-     * Alur kerja:
-     * 1. Check permissions dan location services
-     * 2. Set loading state dan clear previous errors
-     * 3. Request location dengan timeout dan retry
-     * 4. Handle berbagai error scenarios
-     * 5. Update UI state dengan hasil atau error
+     * Get current location
      */
     fun getCurrentLocation() {
         viewModelScope.launch {
             try {
-                // Check permissions first
                 if (!locationHelper.hasLocationPermission()) {
                     _needLocationPermission.value = true
                     return@launch
                 }
 
                 if (!locationHelper.isLocationEnabled()) {
-                    _locationError.value = "Location services are disabled. Please enable GPS or Network location in your device settings."
+                    _errorMessage.value = "Location services are disabled. Please enable GPS or Network location in your device settings."
                     return@launch
                 }
 
                 _isLoadingLocation.value = true
-                _locationError.value = null
                 _errorMessage.value = null
 
                 Log.d(TAG, "Starting location detection...")
 
-                // Request current location dengan enhanced error handling
                 val locationResult = locationHelper.getCurrentLocation()
 
                 if (locationResult != null) {
                     _selectedLocation.value = locationResult
                     _successMessage.value = "Location detected: ${locationResult.countryName} (${locationResult.countryCode})"
-                    Log.d(TAG, "Location obtained successfully: ${locationResult.countryCode}")
-
-                    // Log detailed location info untuk debugging
-                    Log.d(TAG, "Location details - Country: ${locationResult.countryName}, Code: ${locationResult.countryCode}")
-                    Log.d(TAG, "Coordinates: ${locationResult.latitude}, ${locationResult.longitude}")
-                    Log.d(TAG, "Address: ${locationResult.address}")
-
+                    Log.d(TAG, "Location obtained: ${locationResult.countryCode}")
                 } else {
-                    _locationError.value = "Unable to detect your current location. This might be due to:\n" +
-                            "• Weak GPS signal (try moving to an open area)\n" +
-                            "• Network connectivity issues\n" +
-                            "• Location services restrictions\n\n" +
-                            "Please try again or select your country manually."
+                    _errorMessage.value = "Unable to detect your current location. This might be due to weak GPS signal or network issues. Please try again or select your country manually."
                     Log.w(TAG, "Failed to get current location")
                 }
 
             } catch (e: Exception) {
                 val errorMsg = "Error detecting location: ${e.message}"
-                _locationError.value = errorMsg
                 _errorMessage.value = errorMsg
                 Log.e(TAG, "Exception getting location: ${e.message}", e)
             } finally {
@@ -168,13 +128,10 @@ class EditProfileViewModel(
     }
 
     /**
-     * ENHANCED: Handle hasil dari manual location selection
-     *
-     * @param locationResult Hasil dari Google Maps atau country selector
+     * Set manual location
      */
     fun setManualLocation(locationResult: LocationResult) {
         _selectedLocation.value = locationResult
-        _locationError.value = null
 
         val message = if (locationResult.latitude != null && locationResult.longitude != null) {
             "Location selected: ${locationResult.countryName} (precise location)"
@@ -187,78 +144,58 @@ class EditProfileViewModel(
     }
 
     /**
-     * Fungsi untuk clear selected location
+     * Clear selected location
      */
     fun clearSelectedLocation() {
         _selectedLocation.value = null
-        _locationError.value = null
         Log.d(TAG, "Selected location cleared")
     }
 
     /**
-     * ENHANCED: Handle photo dari camera dengan better debugging
+     * Set photo from camera
      */
     fun setPhotoFromCamera() {
         viewModelScope.launch {
             try {
-                Log.d(TAG, "=== CAMERA PHOTO PROCESSING START ===")
+                Log.d(TAG, "Processing camera photo")
 
-                // Ambil URI dari PhotoHelper
                 val photoUri = photoHelper.getCameraPhotoUri()
 
-                Log.d(TAG, "Retrieved camera photo URI: $photoUri")
-
                 if (photoUri == null) {
-                    val errorMsg = "Failed to capture photo - no photo URI available"
-                    Log.e(TAG, errorMsg)
-                    _errorMessage.value = errorMsg
+                    _errorMessage.value = "Failed to capture photo - no photo available"
                     return@launch
                 }
 
-                Log.d(TAG, "Validating photo URI...")
                 if (!photoHelper.isValidPhotoUri(photoUri)) {
-                    val errorMsg = "Invalid photo file or file doesn't exist"
-                    Log.e(TAG, errorMsg)
-                    _errorMessage.value = errorMsg
+                    _errorMessage.value = "Invalid photo file"
                     return@launch
                 }
 
-                Log.d(TAG, "Getting file size...")
                 val fileSize = photoHelper.getFileSize(photoUri)
-                Log.d(TAG, "Photo file size: $fileSize bytes")
-
                 if (fileSize <= 0) {
-                    val errorMsg = "Photo file is empty or corrupted (size: $fileSize)"
-                    Log.e(TAG, errorMsg)
-                    _errorMessage.value = errorMsg
+                    _errorMessage.value = "Photo file is empty or corrupted"
                     return@launch
                 }
 
                 if (fileSize > PhotoHelper.MAX_PHOTO_SIZE_BYTES) {
-                    val errorMsg = "Photo file too large (${fileSize / 1024 / 1024}MB, max 5MB)"
-                    Log.e(TAG, errorMsg)
-                    _errorMessage.value = errorMsg
+                    _errorMessage.value = "Photo file too large (max 5MB)"
                     return@launch
                 }
 
-                Log.d(TAG, "Photo validation successful, setting selected photo URI")
                 _selectedPhotoUri.value = photoUri
                 _successMessage.value = "Photo captured successfully"
 
-                Log.d(TAG, "=== CAMERA PHOTO PROCESSING SUCCESS ===")
-                Log.d(TAG, "Final URI: $photoUri, Size: $fileSize bytes")
+                Log.d(TAG, "Camera photo processed successfully")
 
             } catch (e: Exception) {
-                val errorMsg = "Error processing camera photo: ${e.message}"
-                Log.e(TAG, "=== CAMERA PHOTO PROCESSING ERROR ===")
-                Log.e(TAG, errorMsg, e)
-                _errorMessage.value = errorMsg
+                _errorMessage.value = "Error processing camera photo: ${e.message}"
+                Log.e(TAG, "Exception processing camera photo: ${e.message}", e)
             }
         }
     }
 
     /**
-     * Handle photo dari gallery
+     * Set photo from gallery
      */
     fun setPhotoFromGallery(photoUri: Uri?) {
         viewModelScope.launch {
@@ -300,7 +237,7 @@ class EditProfileViewModel(
     }
 
     /**
-     * ENHANCED: Save profile changes dengan better validation dan feedback
+     * Save profile changes
      */
     fun saveProfileChanges() {
         viewModelScope.launch {
@@ -308,7 +245,6 @@ class EditProfileViewModel(
                 val locationCode = _selectedLocation.value?.countryCode
                 val photoUri = _selectedPhotoUri.value
 
-                // Validate ada perubahan
                 if (locationCode == null && photoUri == null) {
                     _errorMessage.value = "No changes to save"
                     return@launch
@@ -321,7 +257,6 @@ class EditProfileViewModel(
                 Log.d(TAG, "- Location: $locationCode (${_selectedLocation.value?.countryName})")
                 Log.d(TAG, "- Photo URI: $photoUri")
 
-                // Call repository untuk edit profile
                 val result = userRepository.editProfile(
                     context = context,
                     location = locationCode,
@@ -329,7 +264,6 @@ class EditProfileViewModel(
                 )
 
                 result.onSuccess { response ->
-                    // Update current profile dengan data terbaru
                     response.updatedProfile?.let { updatedProfile ->
                         _currentProfile.value = updatedProfile
                         Log.d(TAG, "Profile updated - new location: ${updatedProfile.location}")
@@ -338,7 +272,6 @@ class EditProfileViewModel(
                     // Clear selected changes
                     _selectedLocation.value = null
                     _selectedPhotoUri.value = null
-                    _locationError.value = null
                     photoHelper.clearCameraPhotoUri()
 
                     _successMessage.value = "Profile updated successfully!"
@@ -359,18 +292,17 @@ class EditProfileViewModel(
     }
 
     /**
-     * Check apakah ada perubahan yang belum disave
+     * Check if there are unsaved changes
      */
     fun hasUnsavedChanges(): Boolean {
         return _selectedLocation.value != null || _selectedPhotoUri.value != null
     }
 
     /**
-     * Clear error messages
+     * Clear error message
      */
     fun clearError() {
         _errorMessage.value = null
-        _locationError.value = null
     }
 
     /**
@@ -385,7 +317,6 @@ class EditProfileViewModel(
      */
     fun onLocationPermissionGranted() {
         _needLocationPermission.value = false
-        _locationError.value = null
         getCurrentLocation()
     }
 
@@ -394,8 +325,7 @@ class EditProfileViewModel(
      */
     fun onLocationPermissionDenied() {
         _needLocationPermission.value = false
-        _locationError.value = "Location permission is required to automatically detect your current location. You can still select your country manually."
-        _errorMessage.value = "Location permission denied. Please select your country manually or grant location permission in app settings."
+        _errorMessage.value = "Location permission is required to automatically detect your current location. You can still select your country manually."
     }
 
     /**
@@ -420,18 +350,5 @@ class EditProfileViewModel(
         if (!photoHelper.hasCameraPermission()) {
             _needCameraPermission.value = true
         }
-    }
-
-    /**
-     * Debug function
-     */
-    fun debugLocationState() {
-        Log.d(TAG, "=== LOCATION STATE DEBUG ===")
-        Log.d(TAG, "Has location permission: ${locationHelper.hasLocationPermission()}")
-        Log.d(TAG, "Location services enabled: ${locationHelper.isLocationEnabled()}")
-        Log.d(TAG, "Selected location: ${_selectedLocation.value}")
-        Log.d(TAG, "Location error: ${_locationError.value}")
-        Log.d(TAG, "Loading location: ${_isLoadingLocation.value}")
-        Log.d(TAG, "========================")
     }
 }

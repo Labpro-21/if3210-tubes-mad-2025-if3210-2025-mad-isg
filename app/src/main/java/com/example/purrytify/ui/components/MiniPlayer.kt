@@ -32,7 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.purrytify.R
-
+import androidx.compose.material.icons.filled.Share
 
 @Composable
 fun MiniPlayer(
@@ -41,6 +41,8 @@ fun MiniPlayer(
     onPlayPauseClick: () -> Unit,
     onPlayerClick: () -> Unit
 ) {
+    val context = LocalContext.current
+
     if (currentSong != null) {
         Row(
             modifier = Modifier
@@ -56,7 +58,7 @@ fun MiniPlayer(
             if (currentSong.coverUrl.isNotEmpty()) {
                 // Ideal: Use Coil or Glide untuk loading image dari file path
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
+                    model = ImageRequest.Builder(context)
                         .data(currentSong.coverUrl)
                         .crossfade(true)
                         .build(),
@@ -98,6 +100,39 @@ fun MiniPlayer(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+            }
+
+            if (currentSong.isOnline && currentSong.onlineId != null) {
+                IconButton(onClick = {
+                    // Helper function to convert milliseconds to mm:ss format
+                    fun formatDurationFromMs(durationMs: Long): String {
+                        val minutes = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(durationMs)
+                        val seconds = java.util.concurrent.TimeUnit.MILLISECONDS.toSeconds(durationMs) -
+                                java.util.concurrent.TimeUnit.MINUTES.toSeconds(minutes)
+                        return String.format("%d:%02d", minutes, seconds)
+                    }
+
+                    // Create OnlineSong from current song for sharing
+                    val onlineSong = com.example.purrytify.models.OnlineSong(
+                        id = currentSong.onlineId!!,
+                        title = currentSong.title,
+                        artist = currentSong.artist,
+                        artworkUrl = currentSong.coverUrl,
+                        audioUrl = currentSong.filePath, // For online songs, filePath contains the URL
+                        durationString = formatDurationFromMs(currentSong.duration),
+                        country = "",
+                        rank = 0,
+                        createdAt = "",
+                        updatedAt = ""
+                    )
+                    com.example.purrytify.util.ShareUtils.shareSongUrl(context, onlineSong)
+                }) {
+                    Icon(
+                        imageVector = Icons.Filled.Share,
+                        contentDescription = "Share",
+                        tint = Color.White
+                    )
+                }
             }
 
             // Play/Pause Button

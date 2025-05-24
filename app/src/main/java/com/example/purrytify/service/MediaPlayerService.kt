@@ -23,8 +23,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.IOException
+import kotlin.coroutines.cancellation.CancellationException
 
 class MediaPlayerService : Service() {
     private val TAG = "MediaPlayerService"
@@ -195,46 +197,81 @@ class MediaPlayerService : Service() {
         return binder
     }
 
-    fun playOnlineSong(
+    fun playOnlineSongWithId(
         audioUrl: String,
         title: String,
         artist: String,
-        coverUrl: String = ""
+        coverUrl: String,
+        onlineId: Int
     ) {
+        Log.d(TAG, "=== PLAYING ONLINE SONG WITH ID ===")
+        Log.d(TAG, "Online ID: $onlineId")
+        Log.d(TAG, "Title: $title")
+        Log.d(TAG, "Artist: $artist")
+
         try {
-            Log.d(TAG, "Playing online song: $title - $artist, URL: $audioUrl")
+            // Reset and prepare media player
+            mediaPlayer?.reset()
+            mediaPlayer?.setDataSource(audioUrl)
+            mediaPlayer?.prepareAsync()
 
-            mediaPlayer.reset()
-            mediaPlayer.setDataSource(audioUrl)
+            val onlineSong = Song(
+                id = System.currentTimeMillis(),
+                title = title,
+                artist = artist,
+                coverUrl = coverUrl,
+                filePath = audioUrl,
+                duration = 0L, // Will be updated when prepared
+                isPlaying = false,
+                isLiked = false,
+                isOnline = true,
+                onlineId = onlineId,
+                lastPlayed = System.currentTimeMillis(),
+                addedAt = System.currentTimeMillis(),
+                userId = -1
+            )
 
-            mediaPlayer.prepareAsync()
-            mediaPlayer.setOnPreparedListener {
-                it.start()
+            Log.d(TAG, "Created online song in service:")
+            Log.d(TAG, "  - isOnline: ${onlineSong.isOnline}")
+            Log.d(TAG, "  - onlineId: ${onlineSong.onlineId}")
 
-                val song = Song(
-                    id = -1,
-                    title = title,
-                    artist = artist,
-                    coverUrl = coverUrl,
-                    filePath = audioUrl,
-                    duration = it.duration.toLong(),
-                    isPlaying = true,
-                    isLiked = false,
-                    isOnline = true,
-                    lastPlayed = System.currentTimeMillis()
+            // Set current song immediately
+            _currentSong.value = onlineSong
+
+            // Setup prepared listener
+            mediaPlayer?.setOnPreparedListener { mp ->
+                Log.d(TAG, "=== ONLINE SONG PREPARED ===")
+
+                val duration = mp.duration
+
+                val updatedSong = onlineSong.copy(
+                    duration = duration.toLong(),
+                    isPlaying = true
                 )
 
-                _currentSong.value = song
-                _isPlaying.value = true
-                _duration.value = it.duration
+                Log.d(TAG, "Updated online song:")
+                Log.d(TAG, "  - isOnline: ${updatedSong.isOnline}")
+                Log.d(TAG, "  - onlineId: ${updatedSong.onlineId}")
+                Log.d(TAG, "  - duration: ${updatedSong.duration}")
 
-                startPositionTracking()
-                showNotification()
+                _currentSong.value = updatedSong
+
+                mp.start()
+                _isPlaying.value = true
+                _duration.value = duration
+
+                Log.d(TAG, "=== ONLINE PLAYBACK STARTED ===")
+                Log.d(TAG, "Final state - isOnline: ${_currentSong.value?.isOnline}")
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error playing online song", e)
+            Log.e(TAG, "Error playing online song with ID", e)
         }
+    }
+
+    fun playOnlineSong(audioUrl: String, title: String, artist: String, coverUrl: String) {
+        // Call new method with default ID
+        playOnlineSongWithId(audioUrl, title, artist, coverUrl, -1)
     }
 
     fun playSong(song: Song) {
@@ -370,25 +407,32 @@ class MediaPlayerService : Service() {
     }
 
     private fun startPositionTracking() {
+        // Cancel existing job first
         progressUpdateJob?.cancel()
-        progressUpdateJob = serviceScope.launch {
-            while (_isPlaying.value && !mediaPlayer.isLooping) {
-                try {
-                    if (mediaPlayer.isPlaying) {
-                        _currentPosition.value = mediaPlayer.currentPosition
 
-                        // Update notification with progress every 5 seconds to avoid too frequent updates
-                        if (_currentPosition.value % 5000 < 500) {
-                            showNotification()
-                        }
+        progressUpdateJob = serviceScope.launch {
+            try {
+                while (isActive && mediaPlayer?.isPlaying == true) {
+                    try {
+                        val position = mediaPlayer?.currentPosition ?: 0
+                        _currentPosition.value = position
+                        delay(1000) // Update every second
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error getting current position", e)
+                        break
                     }
-                    delay(500)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error in position tracking: ${e.message}")
-                    break
+                }
+            } catch (e: Exception) {
+                if (e !is CancellationException) {
+                    Log.e(TAG, "Error in position tracking", e)
                 }
             }
         }
+    }
+
+    private fun stopPositionTracking() {
+        progressUpdateJob?.cancel()
+        progressUpdateJob = null
     }
 
     private fun showNotification() {
@@ -411,6 +455,7 @@ class MediaPlayerService : Service() {
 
         // Clean up
         progressUpdateJob?.cancel()
+        stopPositionTracking()
         mediaPlayer.release()
         mediaSession.release()
         hideNotification()

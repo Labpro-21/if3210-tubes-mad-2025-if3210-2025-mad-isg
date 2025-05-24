@@ -36,6 +36,30 @@
         </activity>
 
         <activity
+            android:name=".DeepLinkActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Purrytify"
+            android:launchMode="singleTop">
+
+            <!-- Intent filter untuk custom scheme (tanpa autoVerify) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="purrytify" />
+            </intent-filter>
+
+            <!-- Intent filter khusus untuk song deep links -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="purrytify"
+                    android:host="song" />
+            </intent-filter>
+        </activity>
+
+        <activity
             android:name=".QueueScreenActivity"
             android:exported="false"
             android:theme="@style/Theme.Purrytify" />

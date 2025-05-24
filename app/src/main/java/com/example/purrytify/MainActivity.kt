@@ -79,6 +79,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        handleIncomingIntent(intent)
         // Inisialisasi NetworkConnectionObserver
         networkConnectionObserver = NetworkConnectionObserver(applicationContext)
         networkConnectionObserver.start()
@@ -191,6 +192,72 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
+                }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        intent?.let { handleIncomingIntent(it) }
+    }
+
+    private fun handleIncomingIntent(intent: Intent) {
+        // Handle deep link for online song
+        val playOnlineSongId = intent.getIntExtra("PLAY_ONLINE_SONG_ID", -1)
+        val showPlayer = intent.getBooleanExtra("SHOW_PLAYER", false)
+
+        if (playOnlineSongId != -1) {
+            val title = intent.getStringExtra("ONLINE_SONG_TITLE") ?: ""
+            val artist = intent.getStringExtra("ONLINE_SONG_ARTIST") ?: ""
+            val audioUrl = intent.getStringExtra("ONLINE_SONG_URL") ?: ""
+            val artworkUrl = intent.getStringExtra("ONLINE_SONG_ARTWORK") ?: ""
+
+            // Play the online song after initialization
+            lifecycleScope.launch {
+                // Wait for initialization to complete
+                while (!isInitialized.value) {
+                    kotlinx.coroutines.delay(100)
+                }
+
+                if (tokenManager.isLoggedIn()) {
+                    val onlineSong = com.example.purrytify.models.OnlineSong(
+                        id = playOnlineSongId,
+                        title = title,
+                        artist = artist,
+                        artworkUrl = artworkUrl,
+                        audioUrl = audioUrl,
+                        durationString = "0:00", // Default duration, will be updated when playing
+                        country = "",
+                        rank = 0,
+                        createdAt = "",
+                        updatedAt = ""
+                    )
+
+                    mainViewModel.playOnlineSong(onlineSong)
+
+                    if (showPlayer) {
+                        // Set a flag to show player screen
+                        // This would need to be implemented in the UI layer
+                    }
+                }
+            }
+        }
+
+        // Handle pending song ID after login
+        val pendingSongId = intent.getIntExtra("PENDING_SONG_ID", -1)
+        if (pendingSongId != -1 && tokenManager.isLoggedIn()) {
+            // Fetch and play the pending song
+            lifecycleScope.launch {
+                try {
+                    val response = com.example.purrytify.network.RetrofitClient.apiService.getSongById(pendingSongId)
+                    if (response.isSuccessful) {
+                        response.body()?.let { onlineSong ->
+                            mainViewModel.playOnlineSong(onlineSong)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error fetching pending song", e)
                 }
             }
         }

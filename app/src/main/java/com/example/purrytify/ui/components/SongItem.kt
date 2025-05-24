@@ -33,6 +33,11 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.purrytify.models.Song
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.foundation.layout.size
+import com.example.purrytify.util.ShareUtils
+import java.util.concurrent.TimeUnit
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun SongItem(
@@ -46,6 +51,7 @@ fun SongItem(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showAddToQueueDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     // Use a more dramatic right shift for the dropdown
     val dropdownOffset = remember { DpOffset(x = (-24).dp, y = 0.dp) }
@@ -137,6 +143,50 @@ fun SongItem(
                             },
                             onClick = {
                                 onToggleLike(song, !song.isLiked)
+                                showMenu = false
+                            }
+                        )
+                    }
+
+                    // Share option (TAMBAHAN BARU - only for online songs)
+                    if (song.isOnline && song.onlineId != null) {
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Share,
+                                        contentDescription = null,
+                                        tint = Color.White
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Share Song", color = Color.White)
+                                }
+                            },
+                            onClick = {
+                                // Helper function to convert milliseconds to mm:ss format
+                                fun formatDurationFromMs(durationMs: Long): String {
+                                    val minutes = TimeUnit.MILLISECONDS.toMinutes(durationMs)
+                                    val seconds = TimeUnit.MILLISECONDS.toSeconds(durationMs) -
+                                            TimeUnit.MINUTES.toSeconds(minutes)
+                                    return String.format("%d:%02d", minutes, seconds)
+                                }
+
+                                // Create OnlineSong from current song for sharing
+                                val onlineSong = com.example.purrytify.models.OnlineSong(
+                                    id = song.onlineId!!,
+                                    title = song.title,
+                                    artist = song.artist,
+                                    artworkUrl = song.coverUrl,
+                                    audioUrl = song.filePath, // For online songs, filePath contains the URL
+                                    durationString = formatDurationFromMs(song.duration),
+                                    country = "",
+                                    rank = 0,
+                                    createdAt = "",
+                                    updatedAt = ""
+                                )
+
+                                // Use context yang sudah didapat di level composable
+                                ShareUtils.shareSongUrl(context, onlineSong)
                                 showMenu = false
                             }
                         )

@@ -39,6 +39,7 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 import androidx.activity.ComponentActivity
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.Share
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -226,6 +227,37 @@ fun PlayerScreen(
                             tint = Color.White.copy(alpha = 0.7f),
                             modifier = Modifier.size(24.dp)
                         )
+                    }
+
+                    // Share button (only for online songs) - TAMBAHAN BARU
+                    if (song.isOnline && song.onlineId != null) {
+                        // print log for debugging
+                        println("Sharing song: ${song.title} by ${song.artist}")
+                        IconButton(
+                            onClick = {
+                                // Create OnlineSong from current song for sharing
+                                val onlineSong = com.example.purrytify.models.OnlineSong(
+                                    id = song.onlineId!!,
+                                    title = song.title,
+                                    artist = song.artist,
+                                    artworkUrl = song.coverUrl,
+                                    audioUrl = song.filePath, // For online songs, filePath contains the URL
+                                    durationString = formatDuration(song.duration), // Convert back to mm:ss format
+                                    country = "",
+                                    rank = 0,
+                                    createdAt = "",
+                                    updatedAt = ""
+                                )
+                                com.example.purrytify.util.ShareUtils.shareSongUrl(context, onlineSong)
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Share,
+                                contentDescription = "Share Song",
+                                tint = Color.White.copy(alpha = 0.7f),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
 
                     // Like button

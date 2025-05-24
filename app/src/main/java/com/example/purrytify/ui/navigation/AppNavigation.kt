@@ -71,13 +71,47 @@ fun AppNavigation(
         }
         composable(Destinations.QUEUE_ROUTE) {
             QueueScreen(
-                onNavigateBack = { navController.navigateUp() }
+                onNavigateBack = { navController.popBackStack() },
+                mainViewModel = mainViewModel
+            )
+        }
+        composable(Destinations.ONLINE_SONGS_ROUTE) {
+            OnlineSongsScreen(
+                onSongSelected = { onlineSong ->
+                    // PERBAIKAN: Convert OnlineSong to Song using extension function
+                    val song = onlineSong.toSong()
+                    // Use unified playSong method
+                    mainViewModel.playSong(song)
+                }
+            )
+        }
+        composable(Destinations.QR_SCANNER_ROUTE) {
+            QRScannerScreen(
+                onQRCodeDetected = { qrCode ->
+                    // Handle QR code detection
+                    val songId = com.example.purrytify.util.ShareUtils.extractSongIdFromDeepLink(qrCode)
+                    if (songId != null) {
+                        // Navigate back and handle deep link
+                        navController.popBackStack()
+
+
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(qrCode))
+                        context.startActivity(intent)
+                    } else {
+                        // Show error - invalid QR code
+                        // Navigate back and show error message
+                        navController.popBackStack()
+                    }
+                },
+                onBackPressed = {
+                    navController.popBackStack()
+                }
             )
         }
         composable(Destinations.AUDIO_DEVICES_ROUTE) {
-            AudioDeviceScreen(
-                onBackClick = { navController.popBackStack() }
-            )
+                AudioDeviceScreen(
+                    onBackClick = { navController.popBackStack() }
+                )
         }
     }
 }

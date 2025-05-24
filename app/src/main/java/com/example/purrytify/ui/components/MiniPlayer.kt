@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.purrytify.R
+import com.example.purrytify.ui.components.AudioDeviceIndicatorMini
 
 
 @Composable
@@ -39,7 +40,8 @@ fun MiniPlayer(
     currentSong: Song?,
     isPlaying: Boolean,
     onPlayPauseClick: () -> Unit,
-    onPlayerClick: () -> Unit
+    onPlayerClick: () -> Unit,
+    onAudioDeviceClick: (() -> Unit)? = null
 ) {
     if (currentSong != null) {
         Row(
@@ -106,6 +108,12 @@ fun MiniPlayer(
                     imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                     contentDescription = if (isPlaying) "Pause" else "Play",
                     tint = Color.White
+                )
+            }
+
+            if (onAudioDeviceClick != null) {
+                AudioDeviceIndicatorMini(
+                    onClick = onAudioDeviceClick
                 )
             }
         }

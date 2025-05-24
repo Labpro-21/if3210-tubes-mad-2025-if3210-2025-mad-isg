@@ -1,21 +1,41 @@
 package com.example.purrytify.service
 
-import android.net.Uri
+import android.annotation.SuppressLint
 import android.app.Service
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.MediaPlayer
+import android.net.Uri
 import android.os.Binder
+import android.os.Build
 import android.os.IBinder
+import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.example.purrytify.models.Song
+import com.example.purrytify.receivers.MediaButtonReceiver
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import java.io.IOException
 
 class MediaPlayerService : Service() {
     private val TAG = "MediaPlayerService"
     private val mediaPlayer = MediaPlayer()
+    private lateinit var mediaSession: MediaSessionCompat
+    private lateinit var notificationManager: PurrytifyNotificationManager
+    private lateinit var mediaButtonReceiver: MediaButtonReceiver
+    private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
+    private var progressUpdateJob: Job? = null
+
+    // State flows
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying
 
@@ -28,11 +48,9 @@ class MediaPlayerService : Service() {
     private val _duration = MutableStateFlow(0)
     val duration: StateFlow<Int> = _duration
 
-    // Flags for the end of playback
     private val _reachedEndOfPlayback = MutableStateFlow(false)
     val reachedEndOfPlayback: StateFlow<Boolean> = _reachedEndOfPlayback
 
-    // Track which song is being played to prevent duplicate song infinite loop
     private val _currentPlayingId = MutableStateFlow<Long?>(null)
 
     // Bonus features state
@@ -46,48 +64,105 @@ class MediaPlayerService : Service() {
         fun getService(): MediaPlayerService = this@MediaPlayerService
     }
 
-    override fun onBind(intent: Intent): IBinder {
-        Log.d(TAG, "Service bound")
-        return binder
-    }
-
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "Service created")
 
+        // Initialize MediaSession
+        mediaSession = MediaSessionCompat(this, "PurrytifyMediaSession")
+        mediaSession.setFlags(
+            MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or
+                    MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
+        )
+
+        // Set up MediaSession callback
+        mediaSession.setCallback(object : MediaSessionCompat.Callback() {
+            override fun onPlay() {
+                togglePlayPause()
+            }
+
+            override fun onPause() {
+                togglePlayPause()
+            }
+
+            override fun onSkipToNext() {
+                handleNextAction()
+            }
+
+            override fun onSkipToPrevious() {
+                handlePreviousAction()
+            }
+
+            override fun onStop() {
+                handleStopAction()
+            }
+
+            override fun onSeekTo(pos: Long) {
+                seekTo(pos.toInt())
+            }
+        })
+
+        mediaSession.isActive = true
+
+        // Initialize notification manager
+        notificationManager = PurrytifyNotificationManager(this, mediaSession)
+
+        // Initialize media button receiver
+        mediaButtonReceiver = MediaButtonReceiver()
+        registerMediaButtonReceiver()
+
         localBroadcastManager = LocalBroadcastManager.getInstance(this)
 
-        // Set up completion listener
-        // In MediaPlayerService.kt, update the media player completion listener
+        setupMediaPlayerListeners()
+    }
 
-// Set up completion listener
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    private fun registerMediaButtonReceiver() {
+        val filter = IntentFilter().apply {
+            addAction(PurrytifyNotificationManager.ACTION_PLAY_PAUSE)
+            addAction(PurrytifyNotificationManager.ACTION_NEXT)
+            addAction(PurrytifyNotificationManager.ACTION_PREVIOUS)
+            addAction(PurrytifyNotificationManager.ACTION_STOP)
+        }
+
+        // Register receiver with proper flags for Android 13+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Android 13+ (API 33+) requires explicit exported flag
+            ContextCompat.registerReceiver(
+                this,
+                mediaButtonReceiver,
+                filter,
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+        } else {
+            // Older Android versions
+            registerReceiver(mediaButtonReceiver, filter)
+        }
+    }
+
+    private fun setupMediaPlayerListeners() {
+        // Set up completion listener
         mediaPlayer.setOnCompletionListener {
             Log.d(TAG, "Song completed playback")
             _isPlaying.value = false
+            hideNotification()
 
             // Handle repeat one mode
             if (repeatMode == 2) {
                 Log.d(TAG, "Repeat One mode active, replaying current song")
-                _currentSong.value?.let { song ->
-                    // Replay the same song
+                _currentSong.value?.let {
                     playAgain()
                 }
             } else {
-                // For both Repeat All and No Repeat modes, let the ViewModel handle the next song logic
                 // Send broadcast to notify of song completion
                 val intent = Intent("com.example.purrytify.SONG_COMPLETED")
 
-                // In normal mode (not repeat all), we need to check if we're at the end
                 if (repeatMode == 0) {
-                    // Check if we're at the end of all songs or queue
                     _reachedEndOfPlayback.value = true
                     intent.putExtra("END_OF_PLAYBACK", true)
                 }
 
-                // Add the current song ID to avoid infinite loops
                 intent.putExtra("COMPLETED_SONG_ID", _currentPlayingId.value)
-
-                // Send the broadcast to the ViewModel
                 localBroadcastManager.sendBroadcast(intent)
             }
         }
@@ -95,40 +170,52 @@ class MediaPlayerService : Service() {
         // Set up error listener
         mediaPlayer.setOnErrorListener { mp, what, extra ->
             Log.e(TAG, "MediaPlayer error: what=$what, extra=$extra")
-            true // Return true to indicate we handled the error
+            hideNotification()
+            true
         }
     }
 
-    // Dalam MediaPlayerService.kt
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d(TAG, "Service started with action: ${intent?.getStringExtra("action")}")
+
+        intent?.getStringExtra("action")?.let { action ->
+            when (action) {
+                "TOGGLE_PLAY_PAUSE" -> togglePlayPause()
+                "NEXT" -> handleNextAction()
+                "PREVIOUS" -> handlePreviousAction()
+                "STOP" -> handleStopAction()
+            }
+        }
+
+        return START_STICKY
+    }
+
+    override fun onBind(intent: Intent): IBinder {
+        Log.d(TAG, "Service bound")
+        return binder
+    }
+
     fun playOnlineSong(
         audioUrl: String,
         title: String,
         artist: String,
-        coverUrl: String = "" // Gunakan coverUrl, bukan artworkPath
+        coverUrl: String = ""
     ) {
         try {
             Log.d(TAG, "Playing online song: $title - $artist, URL: $audioUrl")
 
-            // Reset media player
             mediaPlayer.reset()
-
-            // Set data source
             mediaPlayer.setDataSource(audioUrl)
 
-            // Prepare asynchronously
             mediaPlayer.prepareAsync()
-
-            // Set listener for when prepared
             mediaPlayer.setOnPreparedListener {
-                // Start playback
                 it.start()
 
-                // Create song model with proper fields
                 val song = Song(
-                    id = -1, // Temporary ID for online song
+                    id = -1,
                     title = title,
                     artist = artist,
-                    coverUrl = coverUrl, // Use coverUrl parameter
+                    coverUrl = coverUrl,
                     filePath = audioUrl,
                     duration = it.duration.toLong(),
                     isPlaying = true,
@@ -141,8 +228,8 @@ class MediaPlayerService : Service() {
                 _isPlaying.value = true
                 _duration.value = it.duration
 
-                // Start tracking position
                 startPositionTracking()
+                showNotification()
             }
 
         } catch (e: Exception) {
@@ -153,18 +240,12 @@ class MediaPlayerService : Service() {
     fun playSong(song: Song) {
         try {
             Log.d(TAG, "Playing song: ${song.title}, path: ${song.filePath}")
-            // Reset end of playback flag when starting a new song
             _reachedEndOfPlayback.value = false
 
-            // Reset media player if currently playing another song
             mediaPlayer.reset()
-
-            // Save the current song ID to track playback and prevent infinite loops
             _currentPlayingId.value = song.id
 
-            // Check if path is content URI or local file path
             if (song.filePath.startsWith("content://")) {
-                // Use ContentResolver for content URI
                 val uri = Uri.parse(song.filePath)
                 val contentResolver = applicationContext.contentResolver
                 val afd = contentResolver.openFileDescriptor(uri, "r")
@@ -176,22 +257,19 @@ class MediaPlayerService : Service() {
                     throw IOException("Cannot open file descriptor for URI: ${song.filePath}")
                 }
             } else {
-                // Regular local file
                 mediaPlayer.setDataSource(song.filePath)
             }
 
-            // Prepare and play
             mediaPlayer.prepare()
             mediaPlayer.start()
 
-            // Update state
             _currentSong.value = song
             _isPlaying.value = true
             _duration.value = mediaPlayer.duration
             Log.d(TAG, "Song duration: ${mediaPlayer.duration}ms")
 
-            // Start position tracking
             startPositionTracking()
+            showNotification()
 
         } catch (e: IOException) {
             Log.e(TAG, "Error playing song: ${e.message}")
@@ -201,13 +279,13 @@ class MediaPlayerService : Service() {
         }
     }
 
-    // Play the current song again (for repeat one)
     private fun playAgain() {
         try {
             mediaPlayer.seekTo(0)
             mediaPlayer.start()
             _isPlaying.value = true
             startPositionTracking()
+            showNotification()
         } catch (e: Exception) {
             Log.e(TAG, "Error replaying song: ${e.message}")
         }
@@ -224,49 +302,64 @@ class MediaPlayerService : Service() {
             _isPlaying.value = true
             startPositionTracking()
         }
+        showNotification()
     }
 
     fun seekTo(position: Int) {
         Log.d(TAG, "Seeking to position: ${position}ms")
         mediaPlayer.seekTo(position)
         _currentPosition.value = position
+        showNotification()
     }
 
-    // Set shuffle mode
+    private fun handleNextAction() {
+        // Send broadcast to MainViewModel to handle next song logic
+        val intent = Intent("com.example.purrytify.MEDIA_BUTTON_ACTION")
+        intent.putExtra("action", "NEXT")
+        localBroadcastManager.sendBroadcast(intent)
+    }
+
+    private fun handlePreviousAction() {
+        // Send broadcast to MainViewModel to handle previous song logic
+        val intent = Intent("com.example.purrytify.MEDIA_BUTTON_ACTION")
+        intent.putExtra("action", "PREVIOUS")
+        localBroadcastManager.sendBroadcast(intent)
+    }
+
+    private fun handleStopAction() {
+        Log.d(TAG, "Stop action received")
+        stopPlayback()
+        hideNotification()
+
+        // Send broadcast to update UI
+        val intent = Intent("com.example.purrytify.MEDIA_BUTTON_ACTION")
+        intent.putExtra("action", "STOP")
+        localBroadcastManager.sendBroadcast(intent)
+    }
+
     fun setShuffleEnabled(enabled: Boolean) {
         Log.d(TAG, "Shuffle mode set to: $enabled")
         shuffleEnabled = enabled
     }
 
-    // Set repeat mode
     fun setRepeatMode(mode: Int) {
         Log.d(TAG, "Repeat mode set to: $mode")
         repeatMode = mode
     }
 
-    // Reset the end of playback flag
     fun resetEndOfPlaybackFlag() {
         _reachedEndOfPlayback.value = false
     }
 
-    // Method to stop playback and move to end of track
     fun stopPlayback() {
         try {
             if (mediaPlayer.isPlaying) {
-                // Get the total duration of the current song
                 val totalDuration = mediaPlayer.duration
-
-                // Seek to the end of the track
                 mediaPlayer.seekTo(totalDuration)
-
-                // Pause playback
                 mediaPlayer.pause()
-
-                // Update states
                 _isPlaying.value = false
                 _currentPosition.value = totalDuration
                 _reachedEndOfPlayback.value = true
-
                 Log.d(TAG, "Playback stopped and moved to end of track")
             } else {
                 Log.d(TAG, "No need to stop playback, already paused")
@@ -277,27 +370,57 @@ class MediaPlayerService : Service() {
     }
 
     private fun startPositionTracking() {
-        Thread {
-            while (mediaPlayer.isPlaying) {
+        progressUpdateJob?.cancel()
+        progressUpdateJob = serviceScope.launch {
+            while (_isPlaying.value && !mediaPlayer.isLooping) {
                 try {
-                    _currentPosition.value = mediaPlayer.currentPosition
-                    Thread.sleep(500) // Update more frequently for smoother UI
+                    if (mediaPlayer.isPlaying) {
+                        _currentPosition.value = mediaPlayer.currentPosition
+
+                        // Update notification with progress every 5 seconds to avoid too frequent updates
+                        if (_currentPosition.value % 5000 < 500) {
+                            showNotification()
+                        }
+                    }
+                    delay(500)
                 } catch (e: Exception) {
                     Log.e(TAG, "Error in position tracking: ${e.message}")
                     break
                 }
             }
-        }.start()
+        }
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d(TAG, "Service started")
-        return START_STICKY
+    private fun showNotification() {
+        _currentSong.value?.let { song ->
+            notificationManager.showNotification(
+                song,
+                _isPlaying.value,
+                _currentPosition.value.toLong(),
+                _duration.value.toLong()
+            )
+        }
+    }
+
+    private fun hideNotification() {
+        notificationManager.hideNotification()
     }
 
     override fun onDestroy() {
         Log.d(TAG, "Service destroyed")
+
+        // Clean up
+        progressUpdateJob?.cancel()
         mediaPlayer.release()
+        mediaSession.release()
+        hideNotification()
+
+        try {
+            unregisterReceiver(mediaButtonReceiver)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error unregistering media button receiver: ${e.message}")
+        }
+
         super.onDestroy()
     }
 }

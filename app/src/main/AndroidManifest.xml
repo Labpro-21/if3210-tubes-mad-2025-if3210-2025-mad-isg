@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
 
     <application
@@ -44,10 +46,24 @@
             android:exported="false" />
 
 
-        <!-- Make sure you also have the MediaPlayerService registered -->
-        <service
-            android:name=".service.MediaPlayerService"
-            android:enabled="true"
-            android:exported="false" />
+        <!-- Media Button Receiver -->
+        <receiver android:name=".receivers.MediaButtonReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.purrytify.PLAY_PAUSE" />
+                <action android:name="com.example.purrytify.NEXT" />
+                <action android:name="com.example.purrytify.PREVIOUS" />
+                <action android:name="com.example.purrytify.STOP" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Update MediaPlayerService declaration -->
+        <service android:name=".service.MediaPlayerService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback">
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

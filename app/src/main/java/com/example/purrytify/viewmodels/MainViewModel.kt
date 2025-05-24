@@ -1127,4 +1127,26 @@ class MainViewModel(private val songRepository: SongRepository) : ViewModel() {
         // Stop playback
         mediaPlayerService?.stopPlayback()
     }
+
+    fun stopPlayback() {
+        Log.d(TAG, "Stop playback requested from notification")
+
+        // Stop the media player service
+        mediaPlayerService?.stopPlayback()
+
+        // Update UI state
+        _isPlaying.value = false
+        _currentSong.value = null
+
+        // Clear queue and reset state
+        _queue.value = emptyList()
+        _playHistory.value = emptyList()
+        _currentQueueIndex.value = -1
+
+        // Reset position and duration
+        _currentPosition.value = 0
+        _duration.value = 0
+
+        Log.d(TAG, "Playback stopped and state cleared")
+    }
 }

@@ -65,7 +65,7 @@ class SongDownloadManager(private val context: Context) {
             context.registerReceiver(downloadCompleteReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
             // Versi Android yang lebih lama
-            context.registerReceiver(downloadCompleteReceiver, filter)
+//            context.registerReceiver(downloadCompleteReceiver, filter)
         }
     }
 

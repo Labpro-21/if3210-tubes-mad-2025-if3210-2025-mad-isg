@@ -291,7 +291,7 @@ class MediaPlayerService : Service() {
                     mediaPlayer.setDataSource(afd.fileDescriptor)
                     afd.close()
                 } else {
-                    throw IOException("Cannot open file descriptor for URI: $filePath")
+                    throw IOException("Cannot open file descriptor for URI: ${song.filePath}")
                 }
             } else {
                 mediaPlayer.setDataSource(song.filePath)
@@ -317,17 +317,6 @@ class MediaPlayerService : Service() {
         }
     }
 
-    private fun playAgain() {
-        try {
-            mediaPlayer.seekTo(0)
-            mediaPlayer.start()
-            _isPlaying.value = true
-            startPositionTracking()
-            showNotification()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error replaying song: ${e.message}")
-        }
-    }
 
     fun togglePlayPause() {
         if (mediaPlayer.isPlaying) {

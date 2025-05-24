@@ -57,7 +57,6 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -69,7 +68,7 @@ import java.util.*
 
 @Composable
 fun HomeScreen(
-    navController: NavController? = null // TAMBAHKAN parameter ini
+    navController: NavController? = null
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
@@ -178,6 +177,9 @@ fun HomeScreen(
                     },
                     onRefreshRecommendations = {
                         recommendationViewModel.refreshRecommendations()
+                    },
+                    onQRScanClick = {
+                        navController?.navigate(Destinations.QR_SCANNER_ROUTE)
                     }
                 )
             } else {
@@ -202,6 +204,9 @@ fun HomeScreen(
                     },
                     onRefreshRecommendations = {
                         recommendationViewModel.refreshRecommendations()
+                    },
+                    onQRScanClick = {
+                        navController?.navigate(Destinations.QR_SCANNER_ROUTE)
                     }
                 )
             }
@@ -230,7 +235,8 @@ private fun PhoneHomeLayout(
     onSongClick: (Song) -> Unit,
     onAddToQueue: (Song) -> Unit,
     onToggleLike: (Song, Boolean) -> Unit,
-    onRefreshRecommendations: () -> Unit
+    onRefreshRecommendations: () -> Unit,
+    onQRScanClick: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -238,8 +244,11 @@ private fun PhoneHomeLayout(
             .padding(top = 16.dp)
     ) {
         item {
-            // Welcome Header with Gradient
-            WelcomeHeader(greeting = greeting)
+            // Welcome Header with Gradient and QR Scanner button
+            WelcomeHeader(
+                greeting = greeting,
+                onQRScanClick = onQRScanClick
+            )
             Spacer(modifier = Modifier.height(24.dp))
         }
 
@@ -307,7 +316,8 @@ private fun TabletHomeLayout(
     onSongClick: (Song) -> Unit,
     onAddToQueue: (Song) -> Unit,
     onToggleLike: (Song, Boolean) -> Unit,
-    onRefreshRecommendations: () -> Unit
+    onRefreshRecommendations: () -> Unit,
+    onQRScanClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -315,8 +325,11 @@ private fun TabletHomeLayout(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
-        // Welcome Header
-        WelcomeHeader(greeting = greeting)
+        // Welcome Header with QR Scanner button
+        WelcomeHeader(
+            greeting = greeting,
+            onQRScanClick = onQRScanClick
+        )
         Spacer(modifier = Modifier.height(32.dp))
 
         // Two column layout for tablet
@@ -374,7 +387,10 @@ private fun TabletHomeLayout(
 }
 
 @Composable
-private fun WelcomeHeader(greeting: String) {
+private fun WelcomeHeader(
+    greeting: String,
+    onQRScanClick: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -390,20 +406,48 @@ private fun WelcomeHeader(greeting: String) {
             )
             .padding(20.dp)
     ) {
-        Column {
-            Text(
-                text = greeting,
-                color = Color.White,
-                fontSize = 28.sp,
-                fontFamily = FontFamily(Font(R.font.poppins_bold)),
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Let's find something to listen to",
-                color = Color.White.copy(alpha = 0.9f),
-                fontSize = 16.sp,
-                fontFamily = FontFamily(Font(R.font.poppins_regular))
-            )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Greeting Text
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = greeting,
+                    color = Color.White,
+                    fontSize = 28.sp,
+                    fontFamily = FontFamily(Font(R.font.poppins_bold)),
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Let's find something to listen to",
+                    color = Color.White.copy(alpha = 0.9f),
+                    fontSize = 16.sp,
+                    fontFamily = FontFamily(Font(R.font.poppins_regular))
+                )
+            }
+
+            // QR Scanner Button
+            Surface(
+                modifier = Modifier.size(48.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = Color.White.copy(alpha = 0.2f)
+            ) {
+                IconButton(
+                    onClick = onQRScanClick,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.QrCode,
+                        contentDescription = "Scan QR Code",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
         }
     }
 }

@@ -383,7 +383,7 @@ class MusicAnalyticsTracker(
         }
 
         // Update user ID would require creating new tracker instance
-        // This is handled by the repository/service level
+
         Log.d(TAG, "User ID updated from $userId to $newUserId")
     }
 }

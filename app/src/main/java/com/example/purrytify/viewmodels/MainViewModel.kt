@@ -440,14 +440,14 @@ class MainViewModel(private val songRepository: SongRepository, private val anal
         }
     }
 
-    // PERBAIKAN: Unified playSong method for both online and offline songs
+
     fun playSong(song: Song) {
         Log.d(TAG, "Playing song: ${song.title}, isOnline: ${song.isOnline}")
 
         // Reset history when manually selecting a song
         _playHistory.value = emptyList()
 
-        // PERBAIKAN: Always use the unified playSong method
+
         mediaPlayerService?.playSong(song)
 
         // Update current song state
@@ -459,7 +459,7 @@ class MainViewModel(private val songRepository: SongRepository, private val anal
             _queue.value = listOf(song)
             _currentQueueIndex.value = 0
 
-            // PERBAIKAN: Only update last played for offline songs
+
             // Online songs don't need to update database timestamp
             if (!song.isOnline && song.id > 0) {
                 Log.d(TAG, "Updating last played timestamp for offline song ${song.id}")

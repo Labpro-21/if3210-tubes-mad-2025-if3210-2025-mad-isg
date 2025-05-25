@@ -15,7 +15,6 @@ class AnalyticsRepository(private val analyticsDao: AnalyticsDao) {
     private val TAG = "AnalyticsRepository"
     private val monthFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
 
-    // ADD: Public methods for AnalyticsViewModel to access raw data
     suspend fun getTotalListeningTimeForMonthRaw(userId: Long, month: String): Long {
         return withContext(Dispatchers.IO) {
             analyticsDao.getTotalListeningTimeForMonth(userId, month)
@@ -46,9 +45,6 @@ class AnalyticsRepository(private val analyticsDao: AnalyticsDao) {
         }
     }
 
-    /**
-     * Get monthly analytics for a specific user and month
-     */
     suspend fun getMonthlyAnalytics(userId: Long, month: String): MonthlyAnalytics? {
         return try {
             withContext(Dispatchers.IO) {
@@ -60,17 +56,11 @@ class AnalyticsRepository(private val analyticsDao: AnalyticsDao) {
         }
     }
 
-    /**
-     * Get current month analytics
-     */
     suspend fun getCurrentMonthAnalytics(userId: Long): MonthlyAnalytics? {
         val currentMonth = monthFormat.format(Date())
         return getMonthlyAnalytics(userId, currentMonth)
     }
 
-    /**
-     * Get all monthly analytics for a user
-     */
     suspend fun getAllMonthlyAnalytics(userId: Long): List<MonthlyAnalytics> {
         return try {
             withContext(Dispatchers.IO) {
@@ -82,17 +72,11 @@ class AnalyticsRepository(private val analyticsDao: AnalyticsDao) {
         }
     }
 
-    /**
-     * Get total listening time for current month (real-time)
-     */
     fun getCurrentMonthListeningTimeFlow(userId: Long): Flow<Long> {
         val currentMonth = monthFormat.format(Date())
         return analyticsDao.getCurrentMonthListeningTimeFlow(userId, currentMonth)
     }
 
-    /**
-     * Get top artists for a specific month
-     */
     suspend fun getTopArtists(userId: Long, month: String, limit: Int = 5): List<AnalyticsDao.ArtistStats> {
         return try {
             withContext(Dispatchers.IO) {
@@ -104,17 +88,11 @@ class AnalyticsRepository(private val analyticsDao: AnalyticsDao) {
         }
     }
 
-    /**
-     * Get top artists for current month
-     */
     suspend fun getCurrentMonthTopArtists(userId: Long, limit: Int = 5): List<AnalyticsDao.ArtistStats> {
         val currentMonth = monthFormat.format(Date())
         return getTopArtists(userId, currentMonth, limit)
     }
 
-    /**
-     * Get top songs for a specific month
-     */
     suspend fun getTopSongs(userId: Long, month: String, limit: Int = 5): List<AnalyticsDao.SongStats> {
         return try {
             withContext(Dispatchers.IO) {
@@ -126,17 +104,12 @@ class AnalyticsRepository(private val analyticsDao: AnalyticsDao) {
         }
     }
 
-    /**
-     * Get top songs for current month
-     */
     suspend fun getCurrentMonthTopSongs(userId: Long, limit: Int = 5): List<AnalyticsDao.SongStats> {
         val currentMonth = monthFormat.format(Date())
         return getTopSongs(userId, currentMonth, limit)
     }
 
-    /**
-     * Get active song streaks (2+ days)
-     */
+
     suspend fun getActiveStreaks(userId: Long): List<SongStreak> {
         return try {
             withContext(Dispatchers.IO) {
@@ -148,9 +121,6 @@ class AnalyticsRepository(private val analyticsDao: AnalyticsDao) {
         }
     }
 
-    /**
-     * Get top streaks for a user
-     */
     suspend fun getTopStreaks(userId: Long, limit: Int = 10): List<SongStreak> {
         return try {
             withContext(Dispatchers.IO) {
@@ -162,9 +132,6 @@ class AnalyticsRepository(private val analyticsDao: AnalyticsDao) {
         }
     }
 
-    /**
-     * Clean up old streaks (less than 2 days and older than 30 days)
-     */
     suspend fun cleanupOldStreaks(userId: Long) {
         try {
             withContext(Dispatchers.IO) {
@@ -177,9 +144,6 @@ class AnalyticsRepository(private val analyticsDao: AnalyticsDao) {
         }
     }
 
-    /**
-     * Get formatted listening time (hours, minutes)
-     */
     fun formatListeningTime(timeInMillis: Long): String {
         val totalMinutes = timeInMillis / (1000 * 60)
         val hours = totalMinutes / 60
@@ -192,9 +156,6 @@ class AnalyticsRepository(private val analyticsDao: AnalyticsDao) {
         }
     }
 
-    /**
-     * Get available months with data for a user
-     */
     suspend fun getAvailableMonths(userId: Long): List<String> {
         return try {
             getAllMonthlyAnalytics(userId).map { it.month }.distinct().sorted()
@@ -204,9 +165,6 @@ class AnalyticsRepository(private val analyticsDao: AnalyticsDao) {
         }
     }
 
-    /**
-     * Check if user has any data for analytics
-     */
     suspend fun hasAnalyticsData(userId: Long): Boolean {
         return try {
             val currentMonth = monthFormat.format(Date())
@@ -218,9 +176,6 @@ class AnalyticsRepository(private val analyticsDao: AnalyticsDao) {
         }
     }
 
-    /**
-     * Get summary stats for current month
-     */
     data class MonthlyStatsSummary(
         val totalListeningTime: Long,
         val topArtist: String?,
@@ -233,23 +188,22 @@ class AnalyticsRepository(private val analyticsDao: AnalyticsDao) {
     suspend fun getCurrentMonthSummary(userId: Long): MonthlyStatsSummary {
         return try {
             val currentMonth = monthFormat.format(Date())
-            Log.d(TAG, "🔍 Getting summary for user: $userId, month: $currentMonth")
+            Log.d(TAG, "Getting summary for user: $userId, month: $currentMonth")
 
             val analytics = getMonthlyAnalytics(userId, currentMonth)
-            Log.d(TAG, "📊 Monthly analytics: $analytics")
+            Log.d(TAG, "Monthly analytics: $analytics")
 
             val topArtists = getTopArtists(userId, currentMonth, 1)
-            Log.d(TAG, "🎤 Top artists: $topArtists")
+            Log.d(TAG, "Top artists: $topArtists")
 
             val topSongs = getTopSongs(userId, currentMonth, 1)
-            Log.d(TAG, "🎵 Top songs: $topSongs")
+            Log.d(TAG, "Top songs: $topSongs")
 
             val activeStreaks = getActiveStreaks(userId)
-            Log.d(TAG, "🔥 Active streaks: $activeStreaks")
+            Log.d(TAG, "Active streaks: $activeStreaks")
 
-            // ADD: Check raw listening sessions
             val sessions = getListeningSessionsByMonthRaw(userId, currentMonth)
-            Log.d(TAG, "📝 Raw sessions: ${sessions.size} sessions")
+            Log.d(TAG, "Raw sessions: ${sessions.size} sessions")
             sessions.forEach { session ->
                 Log.d(TAG, "  - ${session.songTitle}: ${session.durationListened}ms")
             }
@@ -263,7 +217,7 @@ class AnalyticsRepository(private val analyticsDao: AnalyticsDao) {
                 totalArtists = analytics?.uniqueArtistsCount ?: 0
             )
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error getting current month summary", e)
+            Log.e(TAG, " Error getting current month summary", e)
             MonthlyStatsSummary(0L, null, null, 0, 0, 0)
         }
     }

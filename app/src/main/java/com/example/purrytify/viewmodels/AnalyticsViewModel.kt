@@ -72,7 +72,7 @@ class AnalyticsViewModel(
      */
     fun initializeForUser(userId: Long) {
         currentUserId = userId
-        Log.d(TAG, "🔧 Analytics ViewModel initialized for user: $userId")
+        Log.d(TAG, "Analytics ViewModel initialized for user: $userId")
         loadAvailableMonths()
         loadAnalyticsForCurrentMonth()
     }
@@ -99,20 +99,20 @@ class AnalyticsViewModel(
                 _errorMessage.value = null
                 _selectedMonth.value = month
 
-                Log.d(TAG, "📊 Loading analytics for month: $month, user: $currentUserId")
+                Log.d(TAG, "Loading analytics for month: $month, user: $currentUserId")
 
                 // Get summary from repository
                 val summary = analyticsRepository.getCurrentMonthSummary(currentUserId)
-                Log.d(TAG, "📈 Summary: $summary")
+                Log.d(TAG, "Summary: $summary")
 
                 // Get detailed data
                 val topArtists = analyticsRepository.getCurrentMonthTopArtists(currentUserId, 5)
                 val topSongs = analyticsRepository.getCurrentMonthTopSongs(currentUserId, 5)
                 val streaks = analyticsRepository.getActiveStreaks(currentUserId)
 
-                Log.d(TAG, "🎤 Top artists: ${topArtists.size}")
-                Log.d(TAG, "🎵 Top songs: ${topSongs.size}")
-                Log.d(TAG, "🔥 Streaks: ${streaks.size}")
+                Log.d(TAG, "Top artists: ${topArtists.size}")
+                Log.d(TAG, "Top songs: ${topSongs.size}")
+                Log.d(TAG, "Streaks: ${streaks.size}")
 
                 // Update state
                 _totalListeningTime.value = summary.totalListeningTime
@@ -124,10 +124,10 @@ class AnalyticsViewModel(
 
                 _hasData.value = summary.totalListeningTime > 0 || topArtists.isNotEmpty() || topSongs.isNotEmpty()
 
-                Log.d(TAG, "✅ Analytics loaded successfully for $month - hasData: ${_hasData.value}")
+                Log.d(TAG, "Analytics loaded successfully for $month - hasData: ${_hasData.value}")
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error loading analytics for month $month", e)
+                Log.e(TAG, "Error loading analytics for month $month", e)
                 _errorMessage.value = "Failed to load analytics: ${e.message}"
                 _hasData.value = false
             } finally {
@@ -146,9 +146,9 @@ class AnalyticsViewModel(
             try {
                 val months = analyticsRepository.getAvailableMonths(currentUserId)
                 _availableMonths.value = months
-                Log.d(TAG, "📅 Available months loaded: ${months.size}")
+                Log.d(TAG, "Available months loaded: ${months.size}")
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error loading available months", e)
+                Log.e(TAG, "Error loading available months", e)
                 _availableMonths.value = listOf(_selectedMonth.value) // At least show current month
             }
         }
@@ -162,17 +162,16 @@ class AnalyticsViewModel(
 
         viewModelScope.launch {
             try {
-                Log.d(TAG, "🔄 Force updating analytics...")
+                Log.d(TAG, "Force updating analytics...")
 
                 val month = monthFormat.format(Date())
                 val analyticsId = "analytics_${currentUserId}_$month"
 
-                // FIX: Use public methods from AnalyticsRepository
                 val totalTime = analyticsRepository.getTotalListeningTimeForMonthRaw(currentUserId, month)
                 val uniqueSongs = analyticsRepository.getUniqueSongsCountForMonthRaw(currentUserId, month)
                 val uniqueArtists = analyticsRepository.getUniqueArtistsCountForMonthRaw(currentUserId, month)
 
-                Log.d(TAG, "📊 Raw stats - Time: ${totalTime}ms, Songs: $uniqueSongs, Artists: $uniqueArtists")
+                Log.d(TAG, "Raw stats - Time: ${totalTime}ms, Songs: $uniqueSongs, Artists: $uniqueArtists")
 
                 if (totalTime > 0) {
                     val monthlyAnalytics = MonthlyAnalytics(
@@ -186,25 +185,25 @@ class AnalyticsViewModel(
                         lastUpdated = System.currentTimeMillis()
                     )
 
-                    // FIX: Use public method
+
                     analyticsRepository.insertOrUpdateMonthlyAnalyticsRaw(monthlyAnalytics)
-                    Log.d(TAG, "✅ Force updated monthly analytics")
+                    Log.d(TAG, "Force updated monthly analytics")
 
                     // Reload analytics
                     loadAnalyticsForCurrentMonth()
                 } else {
-                    Log.w(TAG, "⚠️ No listening time found, cannot update analytics")
+                    Log.w(TAG, "No listening time found, cannot update analytics")
 
                     // Check raw sessions for debugging
                     val sessions = analyticsRepository.getListeningSessionsByMonthRaw(currentUserId, month)
-                    Log.d(TAG, "🔍 Found ${sessions.size} raw sessions")
+                    Log.d(TAG, "Found ${sessions.size} raw sessions")
                     sessions.forEach { session ->
                         Log.d(TAG, "  - Session: ${session.songTitle}, Duration: ${session.durationListened}ms")
                     }
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error force updating analytics", e)
+                Log.e(TAG, "Error force updating analytics", e)
             }
         }
     }
@@ -263,21 +262,21 @@ class AnalyticsViewModel(
                 _isExporting.value = true
                 _exportMessage.value = null
 
-                Log.d(TAG, "📤 Exporting analytics for user: $currentUserId, month: $month")
+                Log.d(TAG, "Exporting analytics for user: $currentUserId, month: $month")
 
                 val exporter = AnalyticsExporter(context, analyticsRepository)
                 val uri = exporter.exportToCSV(currentUserId, month)
 
                 if (uri != null) {
                     _exportMessage.value = "Analytics saved to Downloads folder!"
-                    Log.d(TAG, "✅ Analytics exported to Downloads")
+                    Log.d(TAG, "Analytics exported to Downloads")
                 } else {
                     _exportMessage.value = "Failed to export analytics"
-                    Log.e(TAG, "❌ Export failed - no URI returned")
+                    Log.e(TAG, "Export failed - no URI returned")
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error exporting analytics", e)
+                Log.e(TAG, "Error exporting analytics", e)
                 _exportMessage.value = "Error exporting analytics: ${e.message}"
             } finally {
                 _isExporting.value = false
@@ -294,17 +293,17 @@ class AnalyticsViewModel(
         viewModelScope.launch {
             try {
                 _isExporting.value = true
-                // FIX: Don't set message for share - it's instantaneous
 
-                Log.d(TAG, "📤 Sharing analytics for user: $currentUserId, month: $month")
+
+                Log.d(TAG, "Sharing analytics for user: $currentUserId, month: $month")
 
                 val exporter = AnalyticsExporter(context, analyticsRepository)
                 exporter.shareAnalytics(currentUserId, month)
 
-                Log.d(TAG, "✅ Share dialog launched")
+                Log.d(TAG, "Share dialog launched")
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error sharing analytics", e)
+                Log.e(TAG, "Error sharing analytics", e)
                 _exportMessage.value = "Error sharing analytics: ${e.message}"
             } finally {
                 _isExporting.value = false

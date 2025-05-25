@@ -2,6 +2,7 @@ package com.example.purrytify.service
 
 import android.annotation.SuppressLint
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -79,6 +80,7 @@ class MediaPlayerService : Service() {
     private lateinit var audioNoisyReceiver: AudioNoisyReceiver
     private var audioNoisyReceiverRegistered = false
 
+    private lateinit var audioDeviceSwitchReceiver: BroadcastReceiver
 
     inner class MediaPlayerBinder : Binder() {
         fun getService(): MediaPlayerService = this@MediaPlayerService
@@ -168,9 +170,7 @@ class MediaPlayerService : Service() {
             addAction(PurrytifyNotificationManager.ACTION_STOP)
         }
 
-        // Register receiver with proper flags for Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // Android 13+ (API 33+) requires explicit exported flag
             ContextCompat.registerReceiver(
                 this,
                 mediaButtonReceiver,
@@ -201,7 +201,6 @@ class MediaPlayerService : Service() {
 
         // Initialize audio noisy receiver
         audioNoisyReceiver = AudioNoisyReceiver {
-            // Pause playback when audio becomes noisy
             if (mediaPlayer.isPlaying) {
                 togglePlayPause()
 
@@ -665,6 +664,53 @@ class MediaPlayerService : Service() {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error handling audio route change: ${e.message}")
+        }
+    }
+
+
+    fun handleAudioDeviceSwitch(deviceType: String) {
+        Log.d(TAG, "Handling audio device switch to: $deviceType")
+
+        try {
+            val wasPlaying = mediaPlayer.isPlaying
+            val currentPosition = if (wasPlaying) mediaPlayer.currentPosition else 0
+
+            // Pause playback temporarily
+            if (wasPlaying) {
+                mediaPlayer.pause()
+            }
+
+            // Set audio attributes based on device type
+            setAudioAttributesForDevice(deviceType)
+
+            // Wait for audio routing to settle
+            Thread.sleep(150)
+
+            // Resume playback if it was playing
+            if (wasPlaying) {
+                mediaPlayer.seekTo(currentPosition)
+                mediaPlayer.start()
+
+                // Update UI state
+                _isPlaying.value = true
+                startPositionTracking()
+                showNotification()
+            }
+
+            Log.d(TAG, "Audio device switch completed successfully")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error handling audio device switch: ${e.message}")
+
+            // Try to recover playback
+            try {
+                if (mediaPlayer.isPlaying) {
+                    _isPlaying.value = true
+                    startPositionTracking()
+                }
+            } catch (ex: Exception) {
+                Log.e(TAG, "Failed to recover playback: ${ex.message}")
+            }
         }
     }
 

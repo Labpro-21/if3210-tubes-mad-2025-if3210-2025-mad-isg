@@ -13,7 +13,6 @@ import com.example.purrytify.data.entity.ListeningSession
 import com.example.purrytify.data.entity.MonthlyAnalytics
 import com.example.purrytify.data.entity.SongStreak
 
-// Update versi database ke 4 untuk analytics dan disable schema export
 @Database(
     entities = [
         Song::class,
@@ -22,7 +21,7 @@ import com.example.purrytify.data.entity.SongStreak
         SongStreak::class
     ],
     version = 4,
-    exportSchema = false // FIXED: Disable schema export to avoid warning
+    exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun songDao(): SongDao
@@ -32,14 +31,12 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        // Migrasi dari versi 1 ke 2 (yang sudah ada)
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE songs ADD COLUMN user_id INTEGER NOT NULL DEFAULT -1")
             }
         }
 
-        // Migrasi dari versi 2 ke 3 (yang sudah ada)
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // Tambah kolom is_online (Boolean)
@@ -49,7 +46,6 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // Migrasi dari versi 3 ke 4 untuk analytics
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // Create listening_sessions table

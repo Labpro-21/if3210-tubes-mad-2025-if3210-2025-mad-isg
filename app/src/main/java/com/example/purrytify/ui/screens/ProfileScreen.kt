@@ -221,6 +221,8 @@ fun ProfileContent(
     onLogout: () -> Unit,
     navController: NavController
 ) {
+    val context = LocalContext.current
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -475,13 +477,12 @@ fun StatCard(count: String, label: String) {
     }
 }
 
-// Helper function to format date string
+
 private fun formatDate(dateString: String): String {
-    // You can implement proper date formatting logic here
-    // For now, just return a simplified version
+
     return try {
         val parts = dateString.split("T")
-        parts[0]  // Just return the date part
+        parts[0]
     } catch (e: Exception) {
         dateString
     }

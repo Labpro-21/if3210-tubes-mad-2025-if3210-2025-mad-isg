@@ -20,6 +20,7 @@ import com.example.purrytify.util.NetworkConnectionObserver
 import com.example.purrytify.ui.components.NoInternetScreen
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import com.example.purrytify.ui.screens.AnalyticsScreen
 import com.example.purrytify.ui.screens.AudioDeviceScreen
 import com.example.purrytify.viewmodels.MainViewModel
 
@@ -32,6 +33,7 @@ object Destinations {
     const val ONLINE_SONGS_ROUTE = "online_songs"
     const val QR_SCANNER_ROUTE = "qr_scanner"
     const val AUDIO_DEVICES_ROUTE = "audio_devices"
+    const val ANALYTICS_ROUTE = "analytics"
 }
 
 @Composable
@@ -71,6 +73,15 @@ fun AppNavigation(
             } else {
                 NoInternetScreen()
             }
+        }
+        composable(Destinations.QUEUE_ROUTE) {
+            QueueScreen(
+                onNavigateBack = { navController.popBackStack() },
+                mainViewModel = mainViewModel
+            )
+        }
+        composable(Destinations.ANALYTICS_ROUTE) {
+            AnalyticsScreen(navController = navController)
         }
         composable(Destinations.QUEUE_ROUTE) {
             QueueScreen(

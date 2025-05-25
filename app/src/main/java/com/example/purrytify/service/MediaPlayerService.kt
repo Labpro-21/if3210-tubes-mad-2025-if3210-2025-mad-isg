@@ -32,6 +32,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
+import com.example.purrytify.service.AnalyticsService
 
 class MediaPlayerService : Service() {
     private val TAG = "MediaPlayerService"
@@ -41,6 +42,8 @@ class MediaPlayerService : Service() {
     private lateinit var mediaButtonReceiver: MediaButtonReceiver
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     private var progressUpdateJob: Job? = null
+    private lateinit var analyticsService: AnalyticsService
+    private var isAnalyticsInitialized = false
 
     // State flows
     private val _isPlaying = MutableStateFlow(false)
@@ -130,7 +133,30 @@ class MediaPlayerService : Service() {
 
         localBroadcastManager = LocalBroadcastManager.getInstance(this)
 
+        try {
+            val app = applicationContext as com.example.purrytify.PurrytifyApp
+            analyticsService = app.analyticsService
+            Log.d(TAG, "✅ Analytics service initialized successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error initializing analytics service", e)
+        }
+
         setupMediaPlayerListeners()
+    }
+
+    fun initializeAnalyticsForUser(userId: Long) {
+        try {
+            if (::analyticsService.isInitialized) {
+                analyticsService.initializeForUser(userId)
+                isAnalyticsInitialized = true
+                Log.d(TAG, "✅ Analytics initialized for user: $userId")
+            } else {
+                Log.e(TAG, "❌ Analytics service not initialized")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error initializing analytics for user", e)
+            isAnalyticsInitialized = false
+        }
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
@@ -189,6 +215,12 @@ class MediaPlayerService : Service() {
         mediaPlayer.setOnCompletionListener {
             Log.d(TAG, "Song completed playback")
             _isPlaying.value = false
+
+            if (isAnalyticsInitialized) {
+                analyticsService.endTracking()
+                Log.d(TAG, "Ended analytics tracking for completed song")
+            }
+
             hideNotification()
 
             // Handle repeat one mode
@@ -302,6 +334,11 @@ class MediaPlayerService : Service() {
                 _isPlaying.value = true
                 _duration.value = duration
 
+                if (isAnalyticsInitialized) {
+                    analyticsService.startTrackingSong(updatedSong)
+                    Log.d(TAG, "Started analytics tracking for online song: $title")
+                }
+
                 Log.d(TAG, "=== ONLINE PLAYBACK STARTED ===")
                 Log.d(TAG, "Final state - isOnline: ${_currentSong.value?.isOnline}")
             }
@@ -362,6 +399,11 @@ class MediaPlayerService : Service() {
             _isPlaying.value = true
             _duration.value = mediaPlayer.duration
 
+            if (isAnalyticsInitialized) {
+                analyticsService.startTrackingSong(song)
+                Log.d(TAG, "Started analytics tracking for: ${song.title}")
+            }
+
             Log.d(TAG, "Offline song prepared and started: ${song.title}, duration: ${mediaPlayer.duration}ms")
 
             startPositionTracking()
@@ -383,6 +425,10 @@ class MediaPlayerService : Service() {
             Log.d(TAG, "Pausing playback")
             mediaPlayer.pause()
             _isPlaying.value = false
+
+            if (isAnalyticsInitialized) {
+                analyticsService.pauseTracking()
+            }
         } else {
             Log.d(TAG, "Resuming playback")
             mediaPlayer.start()
@@ -447,6 +493,11 @@ class MediaPlayerService : Service() {
                 _isPlaying.value = false
                 _currentPosition.value = totalDuration
                 _reachedEndOfPlayback.value = true
+
+                if (isAnalyticsInitialized) {
+                    analyticsService.endTracking()
+                    Log.d(TAG, "Ended analytics tracking for stopped song")
+                }
                 Log.d(TAG, "Playback stopped and moved to end of track")
             } else {
                 Log.d(TAG, "No need to stop playback, already paused")
@@ -478,6 +529,10 @@ class MediaPlayerService : Service() {
                     try {
                         val position = mediaPlayer?.currentPosition ?: 0
                         _currentPosition.value = position
+
+                        if (isAnalyticsInitialized) {
+                            analyticsService.updateTrackingProgress(position.toLong(), true)
+                        }
                         delay(1000) // Update every second
                     } catch (e: Exception) {
                         Log.e(TAG, "Error getting current position", e)
@@ -534,6 +589,11 @@ class MediaPlayerService : Service() {
             unregisterReceiver(mediaButtonReceiver)
         } catch (e: Exception) {
             Log.e(TAG, "Error unregistering media button receiver: ${e.message}")
+        }
+
+        if (isAnalyticsInitialized) {
+            analyticsService.cleanup()
+            Log.d(TAG, "Analytics service cleaned up")
         }
 
         super.onDestroy()
@@ -639,5 +699,17 @@ class MediaPlayerService : Service() {
         } catch (e: Exception) {
             Log.e(TAG, "Error setting audio attributes: ${e.message}")
         }
+    }
+
+    fun handleUserLogout() {
+        if (isAnalyticsInitialized) {
+            analyticsService.handleUserLogout()
+            isAnalyticsInitialized = false
+            Log.d(TAG, "Analytics tracking stopped due to user logout")
+        }
+    }
+
+    fun getAnalyticsService(): AnalyticsService? {
+        return if (isAnalyticsInitialized) analyticsService else null
     }
 }

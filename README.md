@@ -117,8 +117,8 @@ Berikut adalah halaman yang tersedia dari aplikasi ini:
 - Sound Capsule <br> <img src="screenshot/sound_capsule.png" alt="Sound Capsule Screen" width="300"/>
 - Notification Controls <br> <img src="screenshot/notification_control.png" alt="Notification Controls" width="300"/>
 - Notification from lockscreen <br> <img src="screenshot/lock_screen.png" alt="Notification Lock Screen" width="300"/>
-- Share Songs via URL <br> <img src="screenshot/share.png" alt="Share Songs via URL" width="300"/>
-- Share Songs via QR <br> <img src="screenshot/share_qr.png" alt="Share Songs via QR" width="300"/>
+- Share Songs via URL <br> <img src="screenshot/shere.png" alt="Share Songs via URL" width="300"/>
+- Share Songs via QR <br> <img src="screenshot/shere_qr.png" alt="Share Songs via QR" width="300"/>
 - audio routing <br> <img src="screenshot/audio_output.png" alt="Audio Routing" width="300"/>
 - Rekomendasi Lagu <br> <img src="screenshot/rekomendasi.png" alt="Rekomendasi Lagu" width="300"/>
 - Sound Capsule Analytics <br> <img src="screenshot/sound_capsule.png" alt="Sound Capsule Analytics" width="300"/>
